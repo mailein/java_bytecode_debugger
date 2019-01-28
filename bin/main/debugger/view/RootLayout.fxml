@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="debugger.view.RootLayoutController">
+   <top>
+      <VBox prefWidth="100.0" BorderPane.alignment="CENTER">
+         <children>
+            <MenuBar>
+              <menus>
+                <Menu mnemonicParsing="false" text="File...">
+                     <items>
+                        <MenuItem fx:id="newMenuItem" mnemonicParsing="false" onAction="#handleNew" text="New" />
+                        <MenuItem fx:id="openMenuItem" mnemonicParsing="false" onAction="#handleOpen" text="Open" />
+                        <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" onAction="#handleSave" text="Save" />
+                        <MenuItem fx:id="saveAsMenuItem" mnemonicParsing="false" onAction="#handleSaveAs" text="Save As" />
+                     </items>
+                  </Menu>
+              </menus>
+            </MenuBar>
+            <ToolBar>
+              <items>
+                  <Button fx:id="newButton" mnemonicParsing="false" onAction="#handleNew" text="New" />
+                  <Button fx:id="openButton" mnemonicParsing="false" onAction="#handleOpen" text="Open" />
+                  <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSave" text="Save" />
+                  <Separator orientation="VERTICAL" />
+                  <Button fx:id="runButton" mnemonicParsing="false" onAction="#handleRun" text="Run" />
+                  <Button fx:id="debugButton" mnemonicParsing="false" onAction="#handleDebug" text="Debug" />
+                  <Separator orientation="VERTICAL" />
+                  <Button fx:id="resumeButton" mnemonicParsing="false" text="Resume" />
+                  <Button fx:id="suspendButton" mnemonicParsing="false" text="Suspend" />
+                  <Button fx:id="terminateButton" mnemonicParsing="false" text="Terminate" />
+                  <Separator orientation="VERTICAL" />
+                <Button fx:id="stepIButton" mnemonicParsing="false" text="Stepi" />
+                  <Button fx:id="stepIntoButton" mnemonicParsing="false" text="StepInto" />
+                  <Button fx:id="stepOverButton" mnemonicParsing="false" text="StepOver" />
+                  <Button fx:id="StepReturnButton" mnemonicParsing="false" text="StepReturn" />
+              </items>
+            </ToolBar>
+         </children>
+      </VBox>
+   </top>
+</BorderPane>
