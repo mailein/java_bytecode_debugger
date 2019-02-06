@@ -8,25 +8,32 @@
 
 plugins {
     // Apply the java-library plugin to add support for Java Library
-    id 'java-library'
+    //id 'java-library'
+    id 'java'
 }
 
 dependencies {
     // This dependency is exported to consumers, that is to say found on their compile classpath.
-    api 'org.apache.commons:commons-math3:3.6.1'
+    // api 'org.apache.commons:commons-math3:3.6.1'
 
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation 'com.google.guava:guava:23.0'
+    // implementation 'com.google.guava:guava:23.0'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
     
     // for RichTextFX
-    compile group: 'org.fxmisc.richtext', name: 'richtextfx', version: '0.9.2'
+    implementation group: 'org.fxmisc.richtext', name: 'richtextfx', version: '0.9.2'
     // pseuCo
-    compile files('libs/pseuco-ide-4677.jar')
-    //jdk.jdi
-    compile files('libs/tools.jar')
+    //compile files('libs/pseuco-ide-4677.jar')
+    //jdk.jdi 
+    //compile files('libs/tools.jar')
+    //javaFX11
+    implementation 'org.openjfx:javafx-base:11.0.1:win'
+    implementation 'org.openjfx:javafx-controls:11.0.1:win'
+    implementation 'org.openjfx:javafx-fxml:11.0.1:win'
+    implementation 'org.openjfx:javafx-graphics:11.0.1:win'
+    
     
 }
 
@@ -35,4 +42,15 @@ repositories {
     // Use jcenter for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
+}
+
+configurations.implementation.setCanBeResolved(true)
+
+jar {
+	manifest {
+		attributes('Main-Class': 'Main', 'Class-Path': '.')
+	}
+	from{
+		configurations.implementation.collect {it.isDirectory() ? it : zipTree(it)}
+	}
 }
