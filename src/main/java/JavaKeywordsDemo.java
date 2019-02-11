@@ -96,7 +96,7 @@ public class JavaKeywordsDemo extends Application {
 
         // add line numbers to the left of area
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
-
+        
         // recompute the syntax highlighting 500 ms after user stops editing area
         Subscription cleanupWhenNoLongerNeedIt = codeArea
 

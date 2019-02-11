@@ -4,30 +4,45 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
-
-import debugger.Debugger;
-import debugger.GUI;
-
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Scanner;
+import java.util.function.IntFunction;
 
+import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
+import org.reactfx.EventStream;
+import org.reactfx.EventStreams;
+import org.reactfx.value.Val;
+
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.stage.FileChooser;
-import javafx.stage.Stage;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Polygon;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.layout.AnchorPane;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 public class CodeAreaController {
 //	private MainApp mainApp;
@@ -37,17 +52,49 @@ public class CodeAreaController {
 	private Tab selectedTab = null;
 	@FXML
 	private TabPane tabPane = new TabPane();
-	@FXML
-	private TextArea inputLineNumber = new TextArea();
+	
+	class BreakpointFactory implements IntFunction<Node> {
+		@Override
+		public Node apply(int lineNumber) {
+			Circle circle = new Circle(5.0, Color.BLUE);
+			circle.setVisible(false);
+			Label label = new Label();
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));
+			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+			label.setGraphic(circle);
+			label.setCursor(Cursor.HAND);
+			label.setOnMouseClicked(click -> {
+				if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+					circle.setVisible(!circle.isVisible());
+				}
+			});
+			return label;
+		}
+    }
+	
+	class LineIndicatorFactory implements IntFunction<Node> {//TODO
+    	private final ObservableValue<Integer> suspendAtLineNumber;
+    	
+    	public LineIndicatorFactory(ObservableValue<Integer> suspendAtLineNumber) {
+    		this.suspendAtLineNumber = suspendAtLineNumber;
+    	}
+    	
+		@Override
+		public Node apply(int lineNumber) {
+			Polygon triangle = new Polygon(0.0, 0.0, 10.0, 5.0, 0.0, 10.0);
+			triangle.setFill(Color.GREEN);
+			
+			ObservableValue<Boolean> visible = Val.map(suspendAtLineNumber, currLine -> currLine == lineNumber);
+			
+			EventStream<Boolean> isVisible = EventStreams.nonNullValuesOf(visible);
+			isVisible.subscribe(v -> triangle.setVisible(v));
+			
+			return triangle;
+		}
+    }
 	
 	@FXML
 	private void initialize() {// happens after constructor
-//		this.inputLineNumber.textProperty().addListener((observable, oldValue, newValue) -> {
-//			int lineNumber = Integer.parseInt(newValue);
-//			breakpointLineNumbers.add((Integer)lineNumber);
-//			System.out.println("added line#: " + lineNumber);
-//		});
-		
 		// update selectedTab
 		this.tabPane.getSelectionModel().selectedItemProperty()
 				.addListener((obs, ov, nv) -> this.selectedTab = this.tabPane.getSelectionModel().getSelectedItem());
@@ -84,14 +131,33 @@ public class CodeAreaController {
 		}
 		String name = tempName;
 
-		// tab(name as its title) has a textArea, textArea has text(context as its text)
-		Tab tab = new Tab(name);
-		TextArea textArea = new TextArea();
-		textArea.setText(content);
-		tab.setContent(textArea);
+		CodeArea codeArea = new CodeArea();
+		codeArea.replaceText(content);
+		IntFunction<Node> breakpointFactory = new BreakpointFactory();
+        IntFunction<Node> lineNumberFactory = LineNumberFactory.get(codeArea);
+//        IntFunction<Node> lineIndicatorFactory = new LineIndicatorFactory(codeArea.currentParagraphProperty());
+        IntFunction<Node> graphicFactory = line -> {
+        	Node bp = breakpointFactory.apply(line);
+        	Node lineNum = lineNumberFactory.apply(line);
+        	lineNum.setCursor(Cursor.HAND);
+        	lineNum.setOnMouseClicked(click -> {
+        		if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+        			Node circle = ((Label)bp).getGraphic();
+        			circle.setVisible(!circle.isVisible());
+        		}
+        	});
+        	HBox hBox = new HBox(
+        			bp
+        			,lineNum
+//        			,lineIndicatorFactory.apply(line)
+        			);
+        	hBox.setAlignment(Pos.CENTER_LEFT);
+			return hBox;
+        };
+        codeArea.setParagraphGraphicFactory(graphicFactory);
 		
-		// changeListener, event handler
-		textArea.textProperty().addListener((observable, oldValue, newValue) -> {
+		Tab tab = new Tab(name, new VirtualizedScrollPane<>(codeArea));
+		codeArea.textProperty().addListener((observable, oldValue, newValue) -> {
 			if (!tab.getText().contains("*")) {
 				tab.setText("*" + name);
 			}
@@ -159,8 +225,8 @@ public class CodeAreaController {
 
 	private void writeToFile(Tab tab, File file) {
 		try {
-			TextArea textArea = (TextArea) tab.getContent();
-			Files.write(file.toPath(), textArea.getText().getBytes(), StandardOpenOption.CREATE);
+			CodeArea codeArea = (CodeArea) ((VirtualizedScrollPane<?>) tab.getContent()).getContent();
+			Files.write(file.toPath(), codeArea.getText().getBytes(), StandardOpenOption.CREATE);
 			tabsWithFile.put(tab, file);// update File in tabsWithFile
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();

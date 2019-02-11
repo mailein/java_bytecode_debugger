@@ -5,7 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import debugger.dataType.Configuration;
 import debugger.view.BreakpointAreaController;
 import debugger.view.CodeAreaController;
 import debugger.view.LocalVarAreaController;
@@ -33,12 +38,15 @@ public class GUI extends Application{
 	private static BreakpointAreaController breakpointAreaController;
 	private static LocalVarAreaController localVarAreaController;
 
-	private static String defaultWorkingDir = System.getProperty("user.dir");
-	private static String currentWorkingDir = defaultWorkingDir;
+	private static String sourcepath = System.getProperty("user.dir");
+	private static String classpath = System.getProperty("user.dir");
+	
+	private static Map<String, Configuration> configurations = new HashMap<>(); //<configName, configuration>
+	
 //	private Path mainClassPath = Paths.get(currentWorkingDir, "countdownZuZweit", "Main.java");
 //	private boolean exists = Files.exists(mainClassPath, LinkOption.NOFOLLOW_LINKS);
 	
-	public static void main(String[] args) {
+	public void main(String[] args) {
 		// String[] s = new String[0];
 		// It must be a public subclass of Application with a public no-argument
 		// constructor
@@ -117,7 +125,23 @@ public class GUI extends Application{
 		return localVarAreaController;
 	}
 
-	public static String getCurrentWorkingDir() {
-		return currentWorkingDir;
+	public static String getSourcepath() {
+		return sourcepath;
+	}
+
+	public static void setSourcepath(String sourcepath) {
+		GUI.sourcepath = sourcepath;
+	}
+
+	public static String getClasspath() {
+		return classpath;
+	}
+
+	public static void setClasspath(String classpath) {
+		GUI.classpath = classpath;
+	}
+	
+	public static Map<String, Configuration> getConfigurations() {
+		return configurations;
 	}
 }

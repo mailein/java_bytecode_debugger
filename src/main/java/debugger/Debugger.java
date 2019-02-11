@@ -1,6 +1,10 @@
 package debugger;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +47,7 @@ import com.sun.jdi.request.ThreadStartRequest;
 import debugger.dataType.HistoryRecord;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 
 public class Debugger implements Runnable {
 
@@ -55,25 +60,24 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-	private ObservableList<ReferenceType> classes = FXCollections.observableArrayList();
+	private ObservableMap<Path, ReferenceType> classes = FXCollections.observableHashMap();	//<fileClasspath, refType>
+	
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
 	private String mainClass;
-	private String classPattern;
 	private String classPath;
-	private boolean debugMode = true;
+	private boolean debugMode;
 
-	public Debugger(String mainClass, String classPattern, String classPath, boolean debugMode) {
+	public Debugger(String mainClass, String classPath, boolean debugMode) {
 		this.mainClass = mainClass;
-		this.classPattern = classPattern;
 		this.classPath = classPath;
 		this.debugMode = debugMode;
 	}
 
-	private void debug(String mainClass, String classPattern, String classPath, boolean debugMode)
+	private void debug(String mainClass, String classPath, boolean debugMode)
 			throws IOException, IllegalConnectorArgumentsException, VMStartException, Exception {
-//		System.out.println("cp: " + System.getProperty("java.class.path"));
-		// debugger parameters
+		System.out.println("in debug: mainclass: " + mainClass + " classpath: " + classPath);
+		
 		LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
 
 		// get arg(home, options, main, suspended, quote, vmexec) of launching connector
@@ -81,8 +85,6 @@ public class Debugger implements Runnable {
 		Connector.Argument mainArg = defaultArguments.get("main");
 		Connector.Argument optionsArg = defaultArguments.get("options");
 		Connector.Argument suspendArg = defaultArguments.get("suspend");
-
-		// set arg
 		mainArg.setValue(mainClass);
 		optionsArg.setValue("-cp " + classPath);
 		suspendArg.setValue("true");
@@ -90,11 +92,10 @@ public class Debugger implements Runnable {
 		vm = launchingConnector.launch(defaultArguments);
 		process = vm.process();
 //		System.setOut(new PrintStream(process.getOutputStream(), true));
-		// register request
 		eventRequestManager = vm.eventRequestManager();
 
 		ClassPrepareRequest classPrepareRequest = eventRequestManager.createClassPrepareRequest();
-		classPrepareRequest.addClassFilter(classPattern);
+//		classPrepareRequest.addClassFilter(classPattern);
 //		classPrepareRequest.addCountFilter(1);//no need, so that all class fitting classPattern can have a ClassPrepareEvent
 		classPrepareRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 		classPrepareRequest.enable();
@@ -149,9 +150,12 @@ public class Debugger implements Runnable {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
 			// get the referenceType of this class "Main" in this case
 			ReferenceType classRefType = classPrepareEvent.referenceType();
-			classes.add(classRefType);
 			String className = classRefType.name();
-			System.out.println("--------\n" + "Class " + className + " is already prepared.");
+			Path fileClasspath = refTypeOnClasspath(classRefType, Paths.get(classPath));
+			if(fileClasspath != null) {
+				classes.put(fileClasspath, classRefType);
+				System.out.println("--------\n" + "Class " + className + " is already prepared.");
+			}
 			eventSet.resume();
 		} else if (event instanceof BreakpointEvent) {// switch thread, breakpointReq, stepiReq
 			BreakpointEvent breakpointEvent = (BreakpointEvent) event;
@@ -267,6 +271,20 @@ public class Debugger implements Runnable {
 		return locations;
 	}
 
+	private Path refTypeOnClasspath(ReferenceType refType, Path classpath) {
+		Path path = classpath;
+		String name = refType.name();
+		for (String s : name.split("\\.")) {
+			path = path.resolve(s);
+		}
+		path = Paths.get(path.toString() + ".class");
+		if(Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+			return path;
+		}else {
+			return null;
+		}
+	}
+	
 	public String name() {
 		return (mainClass + " [Java Application]");
 	}
@@ -283,14 +301,14 @@ public class Debugger implements Runnable {
 		return threads;
 	}
 
-	public ObservableList<ReferenceType> getClasses() {
+	public ObservableMap<Path, ReferenceType> getClasses() {
 		return classes;
 	}
 
 	@Override
 	public void run() {
 		try {
-			debug(mainClass, classPattern, classPath, debugMode);
+			debug(mainClass, classPath, debugMode);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

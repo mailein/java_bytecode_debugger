@@ -15,13 +15,18 @@
          <children>
             <MenuBar>
               <menus>
-                <Menu mnemonicParsing="false" text="File...">
+                <Menu mnemonicParsing="false" text="File">
                      <items>
                         <MenuItem fx:id="newMenuItem" mnemonicParsing="false" onAction="#handleNew" text="New" />
                         <MenuItem fx:id="openMenuItem" mnemonicParsing="false" onAction="#handleOpen" text="Open" />
                         <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" onAction="#handleSave" text="Save" />
                         <MenuItem fx:id="saveAsMenuItem" mnemonicParsing="false" onAction="#handleSaveAs" text="Save As" />
                      </items>
+                  </Menu>
+                  <Menu mnemonicParsing="false" text="Run">
+                    <items>
+                      <MenuItem fx:id="configurationsMenuItem" mnemonicParsing="false" onAction="#handleConfigurations" text="Configurations" />
+                    </items>
                   </Menu>
               </menus>
             </MenuBar>
