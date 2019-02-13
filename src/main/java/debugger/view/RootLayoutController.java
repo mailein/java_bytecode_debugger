@@ -19,6 +19,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -65,6 +66,7 @@ public class RootLayoutController {
 	private CodeAreaController codeAreaController;
 
 	private TextField selectedTextField;
+	private int nameCountGen = 0;
 
 	@FXML
 	private void initialize() {
@@ -109,42 +111,130 @@ public class RootLayoutController {
 		codeAreaController.saveFile();
 	}
 
-	private void addNewConfig(Pane parent, TextArea mainclass, TextArea progArg, TextArea sourcepath, TextArea classpath) {
-		TextField configName = new TextField();
-		configName.setPromptText("new Configuration");
-		mainclass.setText("");
-		progArg.setText("");
-		sourcepath.setText("");
-		classpath.setText("");
-		System.out.println("cleared 3 textareas");
-		parent.getChildren().add(configName);
-		configName.textProperty().addListener((obs, ov, nv) -> {
-			if (ov.isEmpty() && !nv.isEmpty())
-				addNewConfig(parent, mainclass, progArg, sourcepath, classpath);
-			if (!ov.isEmpty() && nv.isEmpty()) {
-				if (parent.getChildren().size() != 1)
-					parent.getChildren().remove(configName);
+	/**
+	 * @param parent
+	 * @param        mainclassTextArea: value
+	 * @param        progArgTextArea: value
+	 * @param        sourcepathTextArea: value
+	 * @param        classpathTextArea: value
+	 * @param        configNameTextField: key
+	 */
+	private void monitorConfigName(Pane parent, TextArea mainclassTextArea, TextArea progArgTextArea,
+			TextArea sourcepathTextArea, TextArea classpathTextArea, TextField configNameTextField) {
+		configNameTextField.textProperty().addListener((obs, ov, nv) -> {
+			if (!ov.isEmpty()) {
+				if (nv.isEmpty() && parent.getChildren().size() != 2) {// because one child is button "new" and
+																		// "refresh"
+					parent.getChildren().remove(configNameTextField);
+				}
+				GUI.getConfigurations().remove(ov);
+				System.out.println("MONITOR -- removed " + ov + " from GUI");
+			}
+			if (nv.isEmpty()) {
+				mainclassTextArea.setText("");
+				progArgTextArea.setText("");
+				sourcepathTextArea.setText("");
+				classpathTextArea.setText("");
+			}
+			if (!nv.isEmpty()) {
+				if (!GUI.getConfigurations().containsKey(nv)) {// to ensure no overwrite
+					GUI.getConfigurations().put(nv,
+							new Configuration().setConfigName(nv).setMainClass(mainclassTextArea.getText())
+									.setProgArg(progArgTextArea.getText()).setSourcepath(sourcepathTextArea.getText())
+									.setClasspath(classpathTextArea.getText()).setShown(true));
+					System.out.println("MONITOR -- write " + nv + " to GUI: " + mainclassTextArea.getText() + ", "
+							+ progArgTextArea.getText() + ", " + sourcepathTextArea.getText() + ", "
+							+ classpathTextArea.getText() + ", " + "true");
+				}
 			}
 		});
-		configName.focusedProperty().addListener((obs, ov, nv) -> {
+		configNameTextField.focusedProperty().addListener((obs, ov, nv) -> {
+			this.selectedTextField = configNameTextField;
 			if (nv) {
-				this.selectedTextField = configName;
-				String name = configName.getText();
-				Configuration conf = GUI.getConfigurations().get(configName.getText());
-				if (conf != null) {
-					mainclass.setText(conf.getMainClass());
-					progArg.setText(conf.getProgArg());
-					sourcepath.setText(conf.getSourcepath());
-					classpath.setText(conf.getClasspath());
-					System.out.println("read textareas from GUI: " + conf.getProgArg() + ", " + conf.getSourcepath()
-							+ ", " + conf.getClasspath());
+				if (!configNameTextField.getText().isEmpty()) {
+					Configuration conf = GUI.getConfigurations().get(configNameTextField.getText());
+					if (conf != null) {
+						mainclassTextArea.setText(conf.getMainClass());
+						progArgTextArea.setText(conf.getProgArg());
+						sourcepathTextArea.setText(conf.getSourcepath());
+						classpathTextArea.setText(conf.getClasspath());
+						System.out.println("MONITOR -- read from GUI: " + conf.getMainClass() + ", " + conf.getProgArg()
+								+ ", " + conf.getSourcepath() + ", " + conf.getClasspath());
+					}
+				} else {
+					mainclassTextArea.setText("");
+					progArgTextArea.setText("");
+					sourcepathTextArea.setText("");
+					classpathTextArea.setText("");
 				}
 			}
 		});
 	}
 
+	private void updateExistingConfig(Pane parent, TextArea mainclassTextArea, TextArea progArgTextArea,
+			TextArea sourcepathTextArea, TextArea classpathTextArea) {
+		// add existing configurations to left splitpane
+		GUI.getConfigurations().forEach((name, c) -> {
+			if (!c.isShown()) {
+				TextField tf = new TextField(name);
+				c.setShown(true);
+				parent.getChildren().add(tf);
+				monitorConfigName(parent, mainclassTextArea, progArgTextArea, sourcepathTextArea, classpathTextArea,
+						tf);
+			}
+		});
+	}
+
+	private void addNewConfig(Pane parent, TextArea mainclassTextArea, TextArea progArgTextArea,
+			TextArea sourcepathTextArea, TextArea classpathTextArea, String mainClass, String progArg,
+			String sourcepath, String classpath) {
+
+		// TextArea in the left splitpane
+		TextField configNameTextField = new TextField();
+		String configName = "";
+		if (!mainClass.isEmpty())
+			configName = mainClass;
+		String temp = configName;
+		while (GUI.getConfigurations().containsKey(configName)) {
+			this.nameCountGen++;
+			configName = temp + "(" + this.nameCountGen + ")";
+		}
+		configNameTextField.setText(configName);
+
+		// add to view
+		parent.getChildren().add(configNameTextField);
+		this.selectedTextField = configNameTextField;
+
+		// TextArea in the right splitpane
+		// ATTENTION: only setText for the right splitpane after setting
+		// selectedTextField
+		mainclassTextArea.setText(mainClass);
+		progArgTextArea.setText(progArg);
+		sourcepathTextArea.setText(sourcepath);
+		classpathTextArea.setText(classpath);
+
+		// add to GUI configurations
+		if (!configName.isEmpty()) {
+			Configuration conf = GUI.getConfigurations().get(configName);
+			if (conf == null) {
+				conf = new Configuration();
+			}
+			GUI.getConfigurations().put(configName, conf.setMainClass(mainClass).setProgArg(progArg)
+					.setSourcepath(sourcepath).setClasspath(classpath).setConfigName(configName).setShown(true));
+			System.out.println("NEW -- write " + configName + " to GUI: " + mainClass + ", " + progArg + ", "
+					+ sourcepath + ", " + classpath + ", " + "true");
+		}
+		// add listener for textarea in left splitpane
+		monitorConfigName(parent, mainclassTextArea, progArgTextArea, sourcepathTextArea, classpathTextArea,
+				configNameTextField);
+	}
+
 	@FXML
 	private void handleConfigurations() {
+		System.out.println("-------print config start----------");
+		GUI.getConfigurations().forEach((name, c) -> System.out.println(name));
+		System.out.println("=======print config end============");
+		
 		// splitPane right
 		Label mainClassLabel = new Label("main class:");
 		TextArea mainClassTextArea = new TextArea();
@@ -159,67 +249,34 @@ public class RootLayoutController {
 		TextArea classpathTextArea = new TextArea();
 		classpathTextArea.setPromptText("Default: the path of debugger's jar file");
 		Button run = new Button("Run");
+		run.setOnMouseClicked(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), false));
 		Button debug = new Button("Debug");
-		ButtonBar buttonbar2 = new ButtonBar();
-		buttonbar2.getButtons().addAll(run, debug);
+		debug.setOnMouseClicked(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), true));
+		ButtonBar buttonbar = new ButtonBar();
+		buttonbar.getButtons().addAll(run, debug);
 		VBox right = new VBox(5.0, mainClassLabel, mainClassTextArea, programArgLabel, programArgTextArea,
-				sourcepathLabel, sourcepathTextArea, classpathLabel, classpathTextArea, buttonbar2);
+				sourcepathLabel, sourcepathTextArea, classpathLabel, classpathTextArea, buttonbar);
 		right.setPrefSize(400, 150);
 
 		// splitPane left
 		VBox left = new VBox();
-		addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea, classpathTextArea);
+		Button newButton = new Button("new");
+		Button refreshButton = new Button("refresh");
+		HBox hbox = new HBox(5.0, newButton, refreshButton);
+		left.getChildren().add(hbox);
+		newButton.setOnMouseClicked(event -> addNewConfig(left, mainClassTextArea, programArgTextArea,
+				sourcepathTextArea, classpathTextArea, "", "", "", ""));
+		refreshButton.setOnMouseClicked(event -> updateExistingConfig(left, mainClassTextArea, programArgTextArea,
+				sourcepathTextArea, classpathTextArea));
+		addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea, classpathTextArea, "", "", "",
+				"");
 		left.setPrefSize(50, 150);
 
-		mainClassTextArea.textProperty().addListener((obs, ov, nv) -> {
-			String name = this.selectedTextField.getText();
-			if (!name.isEmpty()) {
-				Configuration conf = GUI.getConfigurations().get(name);
-				if (conf == null) {
-					conf = new Configuration();
-				}
-				conf.setMainClass(nv);
-				GUI.getConfigurations().put(name, conf);
-				System.out.println("write mainclass to GUI: " + nv);
-			}
-		});
-		
-		programArgTextArea.textProperty().addListener((obs, ov, nv) -> {
-			String name = this.selectedTextField.getText();
-			if (!name.isEmpty()) {
-				Configuration conf = GUI.getConfigurations().get(name);
-				if (conf == null) {
-					conf = new Configuration();
-				}
-				conf.setProgArg(nv);
-				GUI.getConfigurations().put(name, conf);
-				System.out.println("write progarg to GUI: " + nv);
-			}
-		});
-		sourcepathTextArea.textProperty().addListener((obs, ov, nv) -> {
-			String name = this.selectedTextField.getText();
-			if (!this.selectedTextField.getText().isEmpty()) {
-				Configuration conf = GUI.getConfigurations().get(name);
-				if (conf == null) {
-					conf = new Configuration();
-				}
-				conf.setSourcepath(nv);
-				GUI.getConfigurations().put(name, conf);
-				System.out.println("write sourcepath to GUI: " + nv);
-			}
-		});
-		classpathTextArea.textProperty().addListener((obs, ov, nv) -> {
-			String name = this.selectedTextField.getText();
-			if (!this.selectedTextField.getText().isEmpty()) {
-				Configuration conf = GUI.getConfigurations().get(name);
-				if (conf == null) {
-					conf = new Configuration();
-				}
-				conf.setClasspath(nv);
-				GUI.getConfigurations().put(name, conf);
-				System.out.println("write classpath to GUI: " + nv);
-			}
-		});
+		// add listener for textarea in right splitpane
+		textAreaAddListener(mainClassTextArea, textAreaType.mainClass);
+		textAreaAddListener(programArgTextArea, textAreaType.progArg);
+		textAreaAddListener(sourcepathTextArea, textAreaType.sourcepath);
+		textAreaAddListener(classpathTextArea, textAreaType.classpath);
 
 		SplitPane splitPane = new SplitPane(left, right);
 		splitPane.setDividerPositions(0.3f, 0.7f);
@@ -231,43 +288,87 @@ public class RootLayoutController {
 		stage.setOnCloseRequest(e -> {
 			GUI.setSourcepath(sourcepathTextArea.getText());
 			GUI.setClasspath(classpathTextArea.getText());
+			GUI.getConfigurations().forEach((name, c) -> c.setShown(false));
 		});
 		stage.show();
 	}
 
+	private enum textAreaType {
+		mainClass, progArg, sourcepath, classpath
+	};
+
+	private void textAreaAddListener(TextArea programArgTextArea, textAreaType type) {
+		programArgTextArea.textProperty().addListener((obs, ov, nv) -> {
+			String name = this.selectedTextField.getText();
+			if (!name.isEmpty()) {
+				Configuration conf = GUI.getConfigurations().get(name);
+				if (conf == null) {
+					conf = new Configuration();
+				}
+				Configuration value = null;
+				switch (type) {
+				case mainClass:
+					value = conf.setMainClass(nv);
+					break;
+				case progArg:
+					value = conf.setProgArg(nv);
+					break;
+				case sourcepath:
+					value = conf.setSourcepath(nv);
+					break;
+				case classpath:
+					value = conf.setClasspath(nv);
+					break;
+				default:
+					break;
+				}
+				GUI.getConfigurations().put(name, value);
+				System.out.println("write " + type + " to GUI: " + nv);
+			}
+		});
+	}
+
 	@FXML
 	private void handleRun() {// eventSet.resume();
-		handleRunOrDebug(false);
+		handleRunOrDebug("", "", false);
 	}
 
 	@FXML
 	private void handleDebug() {
-		handleRunOrDebug(true);
+		handleRunOrDebug("", "", true);
 	}
 
 	// TODO classpath if N/A, then the current working dir
 	// TODO classPath contains the class with main method
 	// TODO mainClass comes from the file of selectedTab, but it should be the
 	// mainClass of the last runConfiguration
-	private void handleRunOrDebug(boolean debugMode) {
-		File file = codeAreaController.getFileOfSelectedTab();
-		if (file == null)
-			return;
+	private void handleRunOrDebug(String mainClass, String classpath, boolean debugMode) {
 		try {
-			// parameters
-			String fileSourcepath = file.getCanonicalPath();
-			String classpath = GUI.getClasspath();
-			String mainClass = fileSourcepath.substring(fileSourcepath.indexOf(classpath) + classpath.length(),
-					fileSourcepath.indexOf("."));
-			System.out.println(
-					"root fileSourcepath: " + fileSourcepath + " classpath: " + classpath + " mainclass: " + mainClass);
-			String regex = System.getProperty("file.separator").equals("\\") ? "\\\\"
-					: System.getProperty("file.separator");
-			mainClass = mainClass.replaceAll(regex, ".");
-			mainClass = mainClass.startsWith(".") ? mainClass.substring(1) : mainClass;
-
-			System.out.println("root controller, mainclass: " + mainClass);
-
+			if(mainClass.isEmpty() || classpath.isEmpty()) {
+				File file = codeAreaController.getFileOfSelectedTab();
+				if (file == null)
+					return;
+				// parameters
+				String fileSourcepath = file.getCanonicalPath();
+				classpath = GUI.getClasspath();
+				mainClass = fileSourcepath.substring(fileSourcepath.indexOf(classpath) + classpath.length(),
+						fileSourcepath.indexOf("."));
+				String regex = System.getProperty("file.separator").equals("\\") ? "\\\\"
+						: System.getProperty("file.separator");
+				mainClass = mainClass.replaceAll(regex, ".");
+				mainClass = mainClass.startsWith(".") ? mainClass.substring(1) : mainClass;
+				System.out.println("user.dir: " + System.getProperty("user.dir"));
+				System.out.println(
+						"root fileSourcepath: " + fileSourcepath + " classpath: " + classpath + " mainclass: " + mainClass);
+				
+				System.out.println("root controller, mainclass: " + mainClass);
+				
+				// create new configuration, add it to GUI's configurations
+				Configuration config = new Configuration().setConfigName(mainClass).setMainClass(mainClass).setProgArg("")
+						.setSourcepath(classpath).setClasspath(classpath).setShown(false);
+				GUI.getConfigurations().put(mainClass, config);
+			}
+			
 			// debugger and thread
 			Debugger debugger;
 			debugger = new Debugger(mainClass, classpath, debugMode);

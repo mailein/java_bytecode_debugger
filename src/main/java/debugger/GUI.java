@@ -1,13 +1,7 @@
 package debugger;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import debugger.dataType.Configuration;
@@ -19,6 +13,9 @@ import debugger.view.RootLayoutController;
 import debugger.view.ThreadAreaController;
 import debugger.view.WatchpointAreaController;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableMap;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
@@ -41,7 +38,8 @@ public class GUI extends Application{
 	private static String sourcepath = System.getProperty("user.dir");
 	private static String classpath = System.getProperty("user.dir");
 	
-	private static Map<String, Configuration> configurations = new HashMap<>(); //<configName, configuration>
+//	private static ObservableMap<String, Configuration> configurations = FXCollections.observableHashMap();
+	private static Map<String, Configuration> configurations = new HashMap<>();//<configName, configuration>
 	
 //	private Path mainClassPath = Paths.get(currentWorkingDir, "countdownZuZweit", "Main.java");
 //	private boolean exists = Files.exists(mainClassPath, LinkOption.NOFOLLOW_LINKS);
