@@ -1,6 +1,11 @@
 package debugger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -73,6 +78,30 @@ public class Debugger implements Runnable {
 		this.classPath = classPath;
 		this.debugMode = debugMode;
 	}
+	
+	//TODO ask for permission, ref: 
+	//https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/VMLauncher.java
+	//https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/StreamRedirectThread.java
+	class IOThread implements Runnable {
+		private BufferedReader in;
+		private PrintStream out;
+		public IOThread(InputStream input, OutputStream output) {
+			this.in = new BufferedReader(new InputStreamReader(input));
+			this.out = new PrintStream(output);
+		}
+		@Override
+		public void run() {
+			String s = "";
+			while(s != null) {
+				out.println(s);
+				try {
+					s = in.readLine();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 
 	private void debug(String mainClass, String classPath, boolean debugMode)
 			throws IOException, IllegalConnectorArgumentsException, VMStartException, Exception {
@@ -91,7 +120,15 @@ public class Debugger implements Runnable {
 
 		vm = launchingConnector.launch(defaultArguments);
 		process = vm.process();
-//		System.setOut(new PrintStream(process.getOutputStream(), true));
+
+		//redirect debuggee's IO
+		Thread outThread = new Thread(new IOThread(process.getInputStream(), System.out));
+		outThread.setDaemon(true);
+		outThread.start();
+		Thread errThread = new Thread(new IOThread(process.getErrorStream(), System.out));
+		errThread.setDaemon(true);
+		errThread.start();
+		
 		eventRequestManager = vm.eventRequestManager();
 
 		ClassPrepareRequest classPrepareRequest = eventRequestManager.createClassPrepareRequest();

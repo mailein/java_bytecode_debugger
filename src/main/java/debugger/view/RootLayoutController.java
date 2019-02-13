@@ -370,8 +370,7 @@ public class RootLayoutController {
 			}
 			
 			// debugger and thread
-			Debugger debugger;
-			debugger = new Debugger(mainClass, classpath, debugMode);
+			Debugger debugger= new Debugger(mainClass, classpath, debugMode);//TODO add progArg to where???
 			Thread t = new Thread(debugger);
 			GUI.getThreadAreaController().addDebugger(debugger, t);
 			t.start();
