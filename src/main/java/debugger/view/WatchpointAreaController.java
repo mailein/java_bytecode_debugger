@@ -22,7 +22,7 @@ public class WatchpointAreaController {
 	
 	@FXML
 	private void initialize() {
-		watchpoints.addListener((ListChangeListener.Change<? extends Watchpoint> c) -> {
+	    watchpoints.addListener((ListChangeListener.Change<? extends Watchpoint> c) -> {
 			//tell all running debuggers to inject
 		});
 //		gridPane.setHgap(0);

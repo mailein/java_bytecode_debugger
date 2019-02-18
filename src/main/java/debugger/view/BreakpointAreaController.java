@@ -2,8 +2,8 @@ package debugger.view;
 
 import debugger.dataType.Breakpoint;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 
 public class BreakpointAreaController {
-	ObservableList<Breakpoint> breakpoints = FXCollections.observableArrayList();
+	private ObservableMap<String, Breakpoint> breakpoints = FXCollections.observableHashMap(); //<classpath, Breakpoint>
 }

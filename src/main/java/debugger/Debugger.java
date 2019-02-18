@@ -34,6 +34,7 @@ import com.sun.jdi.connect.VMStartException;
 import com.sun.jdi.event.AccessWatchpointEvent;
 import com.sun.jdi.event.BreakpointEvent;
 import com.sun.jdi.event.ClassPrepareEvent;
+import com.sun.jdi.event.ClassUnloadEvent;
 import com.sun.jdi.event.Event;
 import com.sun.jdi.event.EventIterator;
 import com.sun.jdi.event.EventQueue;
@@ -44,12 +45,14 @@ import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
 import com.sun.jdi.event.VMStartEvent;
+import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
+import debugger.misc.SourceClassConversion;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -65,34 +68,36 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-	private ObservableMap<Path, ReferenceType> classes = FXCollections.observableHashMap();	//<fileClasspath, refType>
-	
+	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <className, refType>
+
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
-	private String mainClass;
+	private String mainClassName;
 	private String classPath;
 	private boolean debugMode;
 
 	public Debugger(String mainClass, String classPath, boolean debugMode) {
-		this.mainClass = mainClass;
+		this.mainClassName = mainClass;
 		this.classPath = classPath;
 		this.debugMode = debugMode;
 	}
-	
-	//TODO ask for permission, ref: 
-	//https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/VMLauncher.java
-	//https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/StreamRedirectThread.java
+
+	// TODO ask for permission, ref:
+	// https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/VMLauncher.java
+	// https://github.com/jfager/jdiscript/blob/f3768f29d3042d35ee71ba1a80c176d93fae3de5/src/main/java/org/jdiscript/util/StreamRedirectThread.java
 	class IOThread implements Runnable {
 		private BufferedReader in;
 		private PrintStream out;
+
 		public IOThread(InputStream input, OutputStream output) {
 			this.in = new BufferedReader(new InputStreamReader(input));
 			this.out = new PrintStream(output);
 		}
+
 		@Override
 		public void run() {
 			String s = "";
-			while(s != null) {
+			while (s != null) {
 				out.println(s);
 				try {
 					s = in.readLine();
@@ -103,10 +108,10 @@ public class Debugger implements Runnable {
 		}
 	}
 
-	private void debug(String mainClass, String classPath, boolean debugMode)
+	private void debug(String mainClassName, String classPath, boolean debugMode)
 			throws IOException, IllegalConnectorArgumentsException, VMStartException, Exception {
-		System.out.println("in debug: mainclass: " + mainClass + " classpath: " + classPath);
-		
+		System.out.println("in debug: mainclass: " + mainClassName + " classpath: " + classPath);
+
 		LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
 
 		// get arg(home, options, main, suspended, quote, vmexec) of launching connector
@@ -114,21 +119,21 @@ public class Debugger implements Runnable {
 		Connector.Argument mainArg = defaultArguments.get("main");
 		Connector.Argument optionsArg = defaultArguments.get("options");
 		Connector.Argument suspendArg = defaultArguments.get("suspend");
-		mainArg.setValue(mainClass);
+		mainArg.setValue(mainClassName);
 		optionsArg.setValue("-cp " + classPath);
 		suspendArg.setValue("true");
 
 		vm = launchingConnector.launch(defaultArguments);
 		process = vm.process();
 
-		//redirect debuggee's IO
+		// redirect debuggee's IO
 		Thread outThread = new Thread(new IOThread(process.getInputStream(), System.out));
 		outThread.setDaemon(true);
 		outThread.start();
 		Thread errThread = new Thread(new IOThread(process.getErrorStream(), System.out));
 		errThread.setDaemon(true);
 		errThread.start();
-		
+
 		eventRequestManager = vm.eventRequestManager();
 
 		ClassPrepareRequest classPrepareRequest = eventRequestManager.createClassPrepareRequest();
@@ -142,7 +147,6 @@ public class Debugger implements Runnable {
 		threadStartRequest.enable();
 
 		if (debugMode) {
-			// TODO inject Breakpoints
 			eventLoop();
 		}
 
@@ -156,7 +160,7 @@ public class Debugger implements Runnable {
 			EventIterator eventIterator = eventSet.eventIterator();
 			while (eventIterator.hasNext()) {
 				Event event = eventIterator.next();
-				System.out.println("++++++++++++++" + event.toString());
+//				System.out.println("++++++++++++++" + event.toString());
 				if (event instanceof VMDisconnectEvent || event instanceof VMDeathEvent) {
 					System.out.println("--------\n" + "VM disconnected or dead");
 					vmExit = true;
@@ -179,20 +183,32 @@ public class Debugger implements Runnable {
 			eventSet.resume();
 		} else if (event instanceof ThreadStartEvent) {
 			ThreadReference thread = ((ThreadStartEvent) event).thread();
-			if(mainThread.threadGroup().equals(thread.threadGroup())) {
+			if (mainThread.threadGroup().equals(thread.threadGroup())) {
 				threads.add(thread);
 			}
 			eventSet.resume();
-		} else if (event instanceof ClassPrepareEvent) {// TODO assume the first prepared class contains mainMethod
+		} else if (event instanceof ClassPrepareEvent) {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
-			// get the referenceType of this class "Main" in this case
 			ReferenceType classRefType = classPrepareEvent.referenceType();
 			String className = classRefType.name();
-			Path fileClasspath = refTypeOnClasspath(classRefType, Paths.get(classPath));
-			if(fileClasspath != null) {
-				classes.put(fileClasspath, classRefType);
-				System.out.println("--------\n" + "Class " + className + " is already prepared.");
+			//filter only those classes on classpath
+			Path fileClasspath = SourceClassConversion.mapClassName2FileClasspath(className, Paths.get(classPath));
+			if(Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
+				classes.put(className, classRefType);
+				List<Location> locations = classRefType.locationsOfLine(30);
+				System.out.println("--------\n" + "className: " + className + ", classRefType's all line location: " + classRefType.allLineLocations() + " is already prepared.");
+				classRefType.allLineLocations().forEach(l -> {System.out.println(l.method());});
+				System.out.println("--------\n" + "className: " + className + ", classRefType's all fields: " + classRefType.allFields() + " is already prepared.");
+				System.out.println("--------\n" + "className: " + className + ", classRefType's all methods: " + classRefType.allMethods() + " is already prepared.");
+				System.out.println("locations: " + (locations == null) + locations);
 			}
+			eventSet.resume();
+		} else if(event instanceof ClassUnloadEvent) {
+			ClassUnloadEvent classUnloadEvent = (ClassUnloadEvent) event;
+			String className = classUnloadEvent.className();
+			//no need to filter, because classes are inside Debugger
+			classes.remove(className);
+			System.out.println("--------\n" + "className: " + className + " is unloaded.");
 			eventSet.resume();
 		} else if (event instanceof BreakpointEvent) {// switch thread, breakpointReq, stepiReq
 			BreakpointEvent breakpointEvent = (BreakpointEvent) event;
@@ -207,7 +223,7 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-			//TODO resume controlled by GUI/ controller
+			// TODO resume controlled by GUI/ controller
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
 			StepEvent stepEvent = (StepEvent) event;
 			ThreadReference thread = stepEvent.thread();
@@ -225,7 +241,7 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-			//TODO resume controlled by GUI/ controller
+			// TODO resume controlled by GUI/ controller
 		} else if (event instanceof AccessWatchpointEvent) {
 			AccessWatchpointEvent accessWatchpointEvent = (AccessWatchpointEvent) event;
 			ThreadReference thread = accessWatchpointEvent.thread();
@@ -259,7 +275,7 @@ public class Debugger implements Runnable {
 			history.add(record);
 			VarTable.put(f.name(), history);
 			eventSet.resume();
-		}else {
+		} else {
 			eventSet.resume();
 		}
 	}
@@ -298,34 +314,10 @@ public class Debugger implements Runnable {
 		}
 	}
 
-	public List<Location> getLocationsOfLineInClass(ReferenceType refType, int lineNumber) {
-		List<Location> locations = null;
-		try {
-			locations = refType.locationsOfLine(lineNumber);
-		} catch (AbsentInformationException e) {
-			e.printStackTrace();
-		}
-		return locations;
+	public String name() {
+		return mainClassName;
 	}
 
-	private Path refTypeOnClasspath(ReferenceType refType, Path classpath) {
-		Path path = classpath;
-		String name = refType.name();
-		for (String s : name.split("\\.")) {
-			path = path.resolve(s);
-		}
-		path = Paths.get(path.toString() + ".class");
-		if(Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
-			return path;
-		}else {
-			return null;
-		}
-	}
-	
-	public String name() {
-		return (mainClass + " [Java Application]");
-	}
-	
 	public VirtualMachine getVm() {
 		return vm;
 	}
@@ -338,14 +330,14 @@ public class Debugger implements Runnable {
 		return threads;
 	}
 
-	public ObservableMap<Path, ReferenceType> getClasses() {
+	public ObservableMap<String, ReferenceType> getClasses() {
 		return classes;
 	}
 
 	@Override
 	public void run() {
 		try {
-			debug(mainClass, classPath, debugMode);
+			debug(mainClassName, classPath, debugMode);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

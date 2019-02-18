@@ -89,7 +89,7 @@ public class RootLayoutController {
 		fileChooser.setTitle("Open");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Java Files", "*.java"),
 				new FileChooser.ExtensionFilter("All Files", "*.*"));
-		fileChooser.setInitialDirectory(Paths.get(System.getProperty("user.dir"), "").toFile());
+		fileChooser.setInitialDirectory(Paths.get(GUI.getSourcepath().get()).toFile());
 		Stage stage = new Stage();
 		List<File> files = fileChooser.showOpenMultipleDialog(stage);
 		if (files != null) {
@@ -249,9 +249,9 @@ public class RootLayoutController {
 		TextArea classpathTextArea = new TextArea();
 		classpathTextArea.setPromptText("Default: the path of debugger's jar file");
 		Button run = new Button("Run");
-		run.setOnMouseClicked(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), false));
+		run.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), false));
 		Button debug = new Button("Debug");
-		debug.setOnMouseClicked(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), true));
+		debug.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), true));
 		ButtonBar buttonbar = new ButtonBar();
 		buttonbar.getButtons().addAll(run, debug);
 		VBox right = new VBox(5.0, mainClassLabel, mainClassTextArea, programArgLabel, programArgTextArea,
@@ -264,9 +264,9 @@ public class RootLayoutController {
 		Button refreshButton = new Button("refresh");
 		HBox hbox = new HBox(5.0, newButton, refreshButton);
 		left.getChildren().add(hbox);
-		newButton.setOnMouseClicked(event -> addNewConfig(left, mainClassTextArea, programArgTextArea,
+		newButton.setOnAction(event -> addNewConfig(left, mainClassTextArea, programArgTextArea,
 				sourcepathTextArea, classpathTextArea, "", "", "", ""));
-		refreshButton.setOnMouseClicked(event -> updateExistingConfig(left, mainClassTextArea, programArgTextArea,
+		refreshButton.setOnAction(event -> updateExistingConfig(left, mainClassTextArea, programArgTextArea,
 				sourcepathTextArea, classpathTextArea));
 		addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea, classpathTextArea, "", "", "",
 				"");
@@ -286,8 +286,9 @@ public class RootLayoutController {
 		stage.setScene(scene);
 		stage.initModality(Modality.APPLICATION_MODAL);
 		stage.setOnCloseRequest(e -> {
-			GUI.setSourcepath(sourcepathTextArea.getText());
-			GUI.setClasspath(classpathTextArea.getText());
+			//Attention: configuration shouldn't tamper with GUI's sourcepath and classpath
+//			GUI.setSourcepath(sourcepathTextArea.getText());
+//			GUI.setClasspath(classpathTextArea.getText());
 			GUI.getConfigurations().forEach((name, c) -> c.setShown(false));
 		});
 		stage.show();
@@ -346,11 +347,11 @@ public class RootLayoutController {
 		try {
 			if(mainClass.isEmpty() || classpath.isEmpty()) {
 				File file = codeAreaController.getFileOfSelectedTab();
-				if (file == null)
+				if (file == null || !file.isFile())
 					return;
 				// parameters
 				String fileSourcepath = file.getCanonicalPath();
-				classpath = GUI.getClasspath();
+				classpath = GUI.getClasspath().get();
 				mainClass = fileSourcepath.substring(fileSourcepath.indexOf(classpath) + classpath.length(),
 						fileSourcepath.indexOf("."));
 				String regex = System.getProperty("file.separator").equals("\\") ? "\\\\"
@@ -370,12 +371,13 @@ public class RootLayoutController {
 			}
 			
 			// debugger and thread
-			Debugger debugger= new Debugger(mainClass, classpath, debugMode);//TODO add progArg to where???
+			Debugger debugger = new Debugger(mainClass, classpath, debugMode);//TODO add progArg to where???
 			Thread t = new Thread(debugger);
+			GUI.getThreadAreaController().removeAllTerminatedDebugger();
 			GUI.getThreadAreaController().addDebugger(debugger, t);
 			t.start();
 			t.join();
-			GUI.getThreadAreaController().removeDebugger(debugger, t);
+			GUI.getThreadAreaController().applyTerminatedMarker(debugger, t);
 			System.out.println("debugger thread died");
 		} catch (Exception e) {
 			e.printStackTrace();

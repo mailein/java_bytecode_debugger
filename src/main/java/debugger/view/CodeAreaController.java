@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,38 +19,48 @@ import org.reactfx.EventStream;
 import org.reactfx.EventStreams;
 import org.reactfx.value.Val;
 
+import debugger.GUI;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.input.MouseButton;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Polygon;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Polygon;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class CodeAreaController {
-//	private MainApp mainApp;
-
+	@FXML
+	private AnchorPane anchorPane = new AnchorPane();
+	@FXML
+	private TabPane tabPane = new TabPane();
+	@FXML
+	private Label classpathLabel = new Label("classpath");
+	@FXML
+	private TextField classpathTextField = new TextField();
+	
 	private int newCount = 1;
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
 	private Tab selectedTab = null;
-	@FXML
-	private TabPane tabPane = new TabPane();
 	
 	class BreakpointFactory implements IntFunction<Node> {
 		@Override
@@ -65,8 +74,15 @@ public class CodeAreaController {
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
 				if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-					circle.setVisible(!circle.isVisible());
+					boolean visible = circle.isVisible();
+					circle.setVisible(!visible);
+					if(visible) {//remove breakpoint
+						
+					}else {//add breakpoint
+						
+					}
 				}
+				activateClasspath();
 			});
 			return label;
 		}
@@ -93,8 +109,40 @@ public class CodeAreaController {
 		}
     }
 	
+	private void activateClasspath() {
+		if(!classpathTextField.isVisible()) {
+			classpathTextField.setVisible(true);
+			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
+		}
+	}
+	
+	private void deactivateClasspath() {
+		if(classpathTextField.isVisible()) {
+			classpathTextField.setVisible(false);
+			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+		}
+	}
+	
+	private void toggleClasspath() {
+		boolean isActive = classpathTextField.isVisible();
+		classpathTextField.setVisible(!isActive);
+		if(isActive) {
+			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+		}else {
+			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
+		}
+	}
+	
 	@FXML
 	private void initialize() {// happens after constructor
+		classpathLabel.setCursor(Cursor.HAND);
+		classpathLabel.setOnMouseClicked(event -> toggleClasspath());
+		classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+		classpathTextField.setMinWidth(150.0);
+		classpathTextField.prefColumnCountProperty().bind(classpathTextField.textProperty().length());
+		classpathTextField.setVisible(true);
+		classpathTextField.textProperty().bindBidirectional(GUI.getClasspath());		
+		
 		// update selectedTab
 		this.tabPane.getSelectionModel().selectedItemProperty()
 				.addListener((obs, ov, nv) -> this.selectedTab = this.tabPane.getSelectionModel().getSelectedItem());
@@ -112,6 +160,7 @@ public class CodeAreaController {
 
 	// handle MenuItems: New and Open
 	public void newTab(File file) {
+		activateClasspath();
 		// get name and content
 		String tempName = file.getName();
 		String content = "";
