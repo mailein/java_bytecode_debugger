@@ -46,6 +46,7 @@ public class GUI extends Application {
 	private static LocalVarAreaController localVarAreaController;
 
 	//Breakpoint setting depends on this classpath
+	//these are the current configuration's sourcepath and classpath 
 	private static StringProperty sourcepath = new SimpleStringProperty(System.getProperty("user.dir"));
 	private static StringProperty classpath = new SimpleStringProperty(System.getProperty("user.dir"));
 

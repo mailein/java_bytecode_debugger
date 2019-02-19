@@ -20,6 +20,7 @@ import org.reactfx.EventStreams;
 import org.reactfx.value.Val;
 
 import debugger.GUI;
+import debugger.dataType.LineBreakpoint;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
@@ -76,10 +77,16 @@ public class CodeAreaController {
 				if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
 					boolean visible = circle.isVisible();
 					circle.setVisible(!visible);
+					String fileSourcepath = "";
+					try {
+						fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 					if(visible) {//remove breakpoint
-						
+						GUI.getBreakpointAreaController().getBreakpoints().remove(new LineBreakpoint(fileSourcepath, lineNumber));
 					}else {//add breakpoint
-						
+						GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber));
 					}
 				}
 				activateClasspath();

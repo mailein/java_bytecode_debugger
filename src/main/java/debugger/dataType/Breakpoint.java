@@ -1,63 +1,61 @@
 package debugger.dataType;
 
-import java.util.List;
-
-import com.sun.jdi.AbsentInformationException;
-import com.sun.jdi.ClassNotPreparedException;
-import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
-import com.sun.jdi.request.BreakpointRequest;
-import com.sun.jdi.request.EventRequest;
-import com.sun.jdi.request.EventRequestManager;
 
-public class Breakpoint {
+import debugger.Debugger;
 
-	//add breakpoints to all debuggers with the same classpath (no need to force mainClassName to be the same)
-//	private String classpath;
-	
-	private String className;//acquired from the file name of the tab
+public abstract class Breakpoint {
+
+	//directly set by CodeAreaController
+	private String fileSourcepath;//acquired from the file name of the tab
 	private int lineNumber;
-	private boolean waitForClassLoaded = false;
-	private boolean toBeDeleted = false;
-	private boolean toBeDisabled = false;
 	
-	public Breakpoint(String className, int lineNumber) {
-		this.className = className;
+	//to be deduced
+	private Debugger debugger = null;//running debugger
+	private ReferenceType referenceType = null;//*.class of this breakpoint
+	private boolean toBeDisabled = false;//TODO
+	
+	public Breakpoint(String fileSourcepath, int lineNumber) {
+		this.fileSourcepath = fileSourcepath;
 		this.lineNumber = lineNumber;
 	}
 
-	private List<Location> getLocationsOfLineInClass(ReferenceType refType, int lineNumber) {
-		List<Location> locations = null;
-		try {
-			locations = refType.locationsOfLine(lineNumber);
-		} catch (ClassNotPreparedException e) {
-			this.waitForClassLoaded = true;
-		} catch (AbsentInformationException e) {
-			e.printStackTrace();
-		}
-		return locations;
+	public abstract void add();
+	public abstract void remove();
+	public abstract void disable();
+	public abstract boolean isLineBreakpoint();
+	public abstract boolean isWatchpoint();
+	
+//	public boolean isWaitForClassLoaded() {
+//		return waitForClassLoaded;
+//	}
+//
+//	public void setWaitForClassLoaded(boolean waitForClassLoaded) {
+//		this.waitForClassLoaded = waitForClassLoaded;
+//	}
+
+	public String getFileSourcepath() {
+		return fileSourcepath;
 	}
 	
-	private void setBreakpoint(EventRequestManager eventReqMgr, Location loc) {
-		BreakpointRequest breakpointRequest = eventReqMgr.createBreakpointRequest(loc);
-		breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-		breakpointRequest.enable();
+	public int getLineNumber() {
+		return lineNumber;
 	}
 	
-	public boolean isWaitForClassLoaded() {
-		return waitForClassLoaded;
+	public ReferenceType getReferenceType() {
+		return referenceType;
 	}
 
-	public void setWaitForClassLoaded(boolean waitForClassLoaded) {
-		this.waitForClassLoaded = waitForClassLoaded;
+	public void setReferenceType(ReferenceType refType) {
+		this.referenceType = refType;
 	}
 
-	public boolean isToBeDeleted() {
-		return toBeDeleted;
+	public Debugger getDebugger() {
+		return debugger;
 	}
 
-	public void setToBeDeleted(boolean toBeDeleted) {
-		this.toBeDeleted = toBeDeleted;
+	public void setDebugger(Debugger debugger) {
+		this.debugger = debugger;
 	}
 
 	public boolean isToBeDisabled() {
@@ -67,13 +65,14 @@ public class Breakpoint {
 	public void setToBeDisabled(boolean toBeDisabled) {
 		this.toBeDisabled = toBeDisabled;
 	}
-
-	public String getClassName() {
-		return className;
-	}
-
-	public int getLineNumber() {
-		return lineNumber;
-	}
 	
+	@Override
+	public boolean equals(Object o) {
+		if(!(o instanceof Breakpoint))
+			return false;
+		Breakpoint bp = (Breakpoint)o;
+		if(this.getFileSourcepath().equals(bp.getFileSourcepath()) && this.getLineNumber() == bp.getLineNumber())
+			return true;
+		return false;
+	}
 }

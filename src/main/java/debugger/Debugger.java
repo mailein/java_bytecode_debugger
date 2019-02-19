@@ -45,7 +45,6 @@ import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
 import com.sun.jdi.event.VMStartEvent;
-import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
@@ -68,17 +67,25 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <className, refType>
+	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className, refType>
 
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
 	private String mainClassName;
-	private String classPath;
+	private String sourcepath;
+	private String classpath;
 	private boolean debugMode;
 
-	public Debugger(String mainClass, String classPath, boolean debugMode) {
+	/**
+	 * @param mainClass is complete name, eg. countdownZuZweit.Main
+	 * @param sourcepath
+	 * @param classpath
+	 * @param debugMode
+	 */
+	public Debugger(String mainClass, String sourcepath, String classpath, boolean debugMode) {
 		this.mainClassName = mainClass;
-		this.classPath = classPath;
+		this.sourcepath = sourcepath;
+		this.classpath = classpath;
 		this.debugMode = debugMode;
 	}
 
@@ -192,13 +199,18 @@ public class Debugger implements Runnable {
 			ReferenceType classRefType = classPrepareEvent.referenceType();
 			String className = classRefType.name();
 			//filter only those classes on classpath
-			Path fileClasspath = SourceClassConversion.mapClassName2FileClasspath(className, Paths.get(classPath));
+			Path fileClasspath = SourceClassConversion.mapClassName2FileClasspath(className, Paths.get(classpath));
 			if(Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 				List<Location> locations = classRefType.locationsOfLine(30);
 				System.out.println("--------\n" + "className: " + className + ", classRefType's all line location: " + classRefType.allLineLocations() + " is already prepared.");
-				classRefType.allLineLocations().forEach(l -> {System.out.println(l.method());});
 				System.out.println("--------\n" + "className: " + className + ", classRefType's all fields: " + classRefType.allFields() + " is already prepared.");
+				classRefType.allFields().forEach(f -> {
+					System.out.println("declaringType: " + f.declaringType());
+					System.out.println("genericSignature: " + f.genericSignature());
+					System.out.println("name: " + f.name());
+					System.out.println("signature: " + f.signature());
+				});
 				System.out.println("--------\n" + "className: " + className + ", classRefType's all methods: " + classRefType.allMethods() + " is already prepared.");
 				System.out.println("locations: " + (locations == null) + locations);
 			}
@@ -317,10 +329,18 @@ public class Debugger implements Runnable {
 	public String name() {
 		return mainClassName;
 	}
-
-	public VirtualMachine getVm() {
-		return vm;
+	
+	public String sourcepath() {
+		return sourcepath;
 	}
+	
+	public String classpath() {
+		return classpath;
+	}
+
+//	public VirtualMachine getVm() {
+//		return vm;
+//	}
 
 	public EventRequestManager getEventRequestManager() {
 		return eventRequestManager;
@@ -334,10 +354,19 @@ public class Debugger implements Runnable {
 		return classes;
 	}
 
+	public List<ReferenceType> getAnonymousClasses(String startingWithClassName){
+		List<ReferenceType> anonymousClasses = new ArrayList<>();
+		classes.forEach((className, refType) -> {
+			if(className.startsWith(startingWithClassName) && !className.equals(startingWithClassName))
+				anonymousClasses.add(refType);
+		});
+		return anonymousClasses;
+	}
+	
 	@Override
 	public void run() {
 		try {
-			debug(mainClassName, classPath, debugMode);
+			debug(mainClassName, classpath, debugMode);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -7,6 +7,7 @@ import java.util.List;
 import debugger.Debugger;
 import debugger.GUI;
 import debugger.dataType.Configuration;
+import debugger.misc.SourceClassConversion;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -234,7 +235,7 @@ public class RootLayoutController {
 		System.out.println("-------print config start----------");
 		GUI.getConfigurations().forEach((name, c) -> System.out.println(name));
 		System.out.println("=======print config end============");
-		
+
 		// splitPane right
 		Label mainClassLabel = new Label("main class:");
 		TextArea mainClassTextArea = new TextArea();
@@ -249,9 +250,11 @@ public class RootLayoutController {
 		TextArea classpathTextArea = new TextArea();
 		classpathTextArea.setPromptText("Default: the path of debugger's jar file");
 		Button run = new Button("Run");
-		run.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), false));
+		run.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), sourcepathTextArea.getText(),
+				classpathTextArea.getText(), false));
 		Button debug = new Button("Debug");
-		debug.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), classpathTextArea.getText(), true));
+		debug.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), sourcepathTextArea.getText(),
+				classpathTextArea.getText(), true));
 		ButtonBar buttonbar = new ButtonBar();
 		buttonbar.getButtons().addAll(run, debug);
 		VBox right = new VBox(5.0, mainClassLabel, mainClassTextArea, programArgLabel, programArgTextArea,
@@ -264,8 +267,8 @@ public class RootLayoutController {
 		Button refreshButton = new Button("refresh");
 		HBox hbox = new HBox(5.0, newButton, refreshButton);
 		left.getChildren().add(hbox);
-		newButton.setOnAction(event -> addNewConfig(left, mainClassTextArea, programArgTextArea,
-				sourcepathTextArea, classpathTextArea, "", "", "", ""));
+		newButton.setOnAction(event -> addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea,
+				classpathTextArea, "", "", "", ""));
 		refreshButton.setOnAction(event -> updateExistingConfig(left, mainClassTextArea, programArgTextArea,
 				sourcepathTextArea, classpathTextArea));
 		addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea, classpathTextArea, "", "", "",
@@ -286,7 +289,7 @@ public class RootLayoutController {
 		stage.setScene(scene);
 		stage.initModality(Modality.APPLICATION_MODAL);
 		stage.setOnCloseRequest(e -> {
-			//Attention: configuration shouldn't tamper with GUI's sourcepath and classpath
+			// Attention: configuration shouldn't tamper with GUI's sourcepath and classpath
 //			GUI.setSourcepath(sourcepathTextArea.getText());
 //			GUI.setClasspath(classpathTextArea.getText());
 			GUI.getConfigurations().forEach((name, c) -> c.setShown(false));
@@ -331,47 +334,47 @@ public class RootLayoutController {
 
 	@FXML
 	private void handleRun() {// eventSet.resume();
-		handleRunOrDebug("", "", false);
+		handleRunOrDebug("", "", "", false);
 	}
 
 	@FXML
 	private void handleDebug() {
-		handleRunOrDebug("", "", true);
+		handleRunOrDebug("", "", "", true);
 	}
 
-	// TODO classpath if N/A, then the current working dir
-	// TODO classPath contains the class with main method
-	// TODO mainClass comes from the file of selectedTab, but it should be the
-	// mainClass of the last runConfiguration
-	private void handleRunOrDebug(String mainClass, String classpath, boolean debugMode) {
+	// TODO if the class of currently selected tab doesn't contain main method, then
+	// mainClass should come from last runConfiguration
+	private void handleRunOrDebug(String mainClass, String sourcepath, String classpath, boolean debugMode) {
 		try {
-			if(mainClass.isEmpty() || classpath.isEmpty()) {
+			if (sourcepath.isEmpty()) {
+				sourcepath = GUI.getSourcepath().get();
+			} else {
+				GUI.setSourcepath(sourcepath);
+			}
+			if (classpath.isEmpty()) {
+				classpath = GUI.getClasspath().get();
+			} else {
+				GUI.setClasspath(classpath);
+			}
+			if (mainClass.isEmpty()) {
 				File file = codeAreaController.getFileOfSelectedTab();
 				if (file == null || !file.isFile())
 					return;
 				// parameters
 				String fileSourcepath = file.getCanonicalPath();
-				classpath = GUI.getClasspath().get();
-				mainClass = fileSourcepath.substring(fileSourcepath.indexOf(classpath) + classpath.length(),
-						fileSourcepath.indexOf("."));
-				String regex = System.getProperty("file.separator").equals("\\") ? "\\\\"
-						: System.getProperty("file.separator");
-				mainClass = mainClass.replaceAll(regex, ".");
-				mainClass = mainClass.startsWith(".") ? mainClass.substring(1) : mainClass;
-				System.out.println("user.dir: " + System.getProperty("user.dir"));
-				System.out.println(
-						"root fileSourcepath: " + fileSourcepath + " classpath: " + classpath + " mainclass: " + mainClass);
-				
-				System.out.println("root controller, mainclass: " + mainClass);
-				
-				// create new configuration, add it to GUI's configurations
-				Configuration config = new Configuration().setConfigName(mainClass).setMainClass(mainClass).setProgArg("")
-						.setSourcepath(classpath).setClasspath(classpath).setShown(false);
-				GUI.getConfigurations().put(mainClass, config);
+				System.out.println("root fileSourcepath: " + fileSourcepath);
+				mainClass = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath), Paths.get(fileSourcepath));
 			}
-			
+			System.out.println(
+					"root mainclass: " + mainClass + ", sourcepath: " + sourcepath + ", classpath: " + classpath);
+			// create new configuration, add it to GUI's configurations
+			Configuration config = new Configuration().setConfigName(mainClass).setMainClass(mainClass).setProgArg("")
+					.setSourcepath(sourcepath).setClasspath(classpath).setShown(false);
+			GUI.getConfigurations().put(mainClass, config);
+
 			// debugger and thread
-			Debugger debugger = new Debugger(mainClass, classpath, debugMode);//TODO add progArg to where???
+			Debugger debugger = new Debugger(mainClass, sourcepath, classpath, debugMode);// TODO add progArg to
+																							// where???
 			Thread t = new Thread(debugger);
 			GUI.getThreadAreaController().removeAllTerminatedDebugger();
 			GUI.getThreadAreaController().addDebugger(debugger, t);

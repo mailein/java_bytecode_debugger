@@ -1,5 +1,6 @@
 package debugger.view;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +22,9 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.AnchorPane;
 
-public class ThreadAreaController {//TODO handle resume and suspend threadReference
-	// tree > root > debuggers > threadReferences for each debugger > stackFrames for each threadReference
+public class ThreadAreaController {// TODO handle resume and suspend threadReference
+	// tree > root > debuggers > threadReferences for each debugger > stackFrames
+	// for each threadReference
 	@FXML
 	private AnchorPane anchorPane = new AnchorPane();
 	private TreeView<String> tree;
@@ -31,22 +33,22 @@ public class ThreadAreaController {//TODO handle resume and suspend threadRefere
 	private Debugger selectedDebugger;
 	private ThreadReference selectedThread;
 	private StackFrame selectedStack;
-	
+
 	private Map<Thread, Debugger> terminatedDebuggers = new HashMap<>();
 	private String terminatedMarker = "<terminated>";
 	private String debuggerNameMarker = "[Java Application]";
 	private String threadNameMarker = "Thread[";
 	private String stackNameMarker = " line:";
-	
+
 	@FXML
 	private void initialize() {
 		TreeItem<String> root = new TreeItem<>();
 		root.setExpanded(true);
 		tree = new TreeView<String>(root);
 		anchorPane.getChildren().add(tree);
-		tree.prefWidthProperty().bind(anchorPane.widthProperty());//fit tree's size to parent anchorpane
+		tree.prefWidthProperty().bind(anchorPane.widthProperty());// fit tree's size to parent anchorpane
 		tree.prefHeightProperty().bind(anchorPane.heightProperty());
-		
+
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
 			if (nv.getValue().contains(debuggerNameMarker)) {
@@ -89,22 +91,23 @@ public class ThreadAreaController {//TODO handle resume and suspend threadRefere
 		dbgTreeItem.setValue(s);
 
 		terminatedDebuggers.put(t, debugger);
-		
-		//remove all treeItems under this debugger other than debuggerTreeItem
+
+		// remove all treeItems under this debugger other than debuggerTreeItem
 		removeDebuggerChildrenFromTree(debugger, t);
 	}
-	
+
 	public void removeAllTerminatedDebugger() {
-		terminatedDebuggers.forEach((t , debugger) -> removeDebugger(debugger, t));
+		terminatedDebuggers.forEach((t, debugger) -> removeDebugger(debugger, t));
 		terminatedDebuggers.clear();
 	}
-	
+
 	public void removeDebugger(Debugger debugger, Thread t) {
 		debuggers.remove(t, debugger);
 		removeDebuggerFromTree(debugger, t);
 	}
 
-	//only added Debugger and its threadReferences to root, stackFrame is not added in this method
+	// only added Debugger and its threadReferences to root, stackFrame is not added
+	// in this method
 	private void addDebuggerToTree(Debugger debugger, Thread t) {
 		TreeItem<String> dbgTreeItem = addBranch(generateDebuggerName(debugger, t), tree.getRoot());
 		ObservableList<ThreadReference> threads = debugger.getThreads();
@@ -121,15 +124,17 @@ public class ThreadAreaController {//TODO handle resume and suspend threadRefere
 	}
 
 	private void removeDebuggerFromTree(Debugger debugger, Thread t) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)), tree.getRoot());
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)),
+				tree.getRoot());
 		tree.getRoot().getChildren().remove(dbgTreeItem);
 	}
-	
+
 	private void removeDebuggerChildrenFromTree(Debugger debugger, Thread t) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)), tree.getRoot());
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)),
+				tree.getRoot());
 		dbgTreeItem.getChildren().clear();
 	}
-	
+
 	// add threads to Debugger; add stackFrames to thread
 	private TreeItem<String> addBranch(String son, TreeItem<String> parent) {
 		TreeItem<String> item = new TreeItem<>();
@@ -146,7 +151,7 @@ public class ThreadAreaController {//TODO handle resume and suspend threadRefere
 	}
 
 	// called at every suspension!!
-	public void addStackFrameBranch() {//TODO
+	public void addStackFrameBranch() {// TODO
 //		for (Entry<Thread, Debugger> entry : debuggers.entrySet()) {
 //			Thread dbgT = entry.getKey();
 //			Debugger dbg = entry.getValue();
@@ -221,5 +226,22 @@ public class ThreadAreaController {//TODO handle resume and suspend threadRefere
 		String lineNumber = String.valueOf(loc.lineNumber());
 		String bci = String.valueOf(loc.codeIndex());
 		return className + "." + methodSignature + stackNameMarker + lineNumber + " bci:" + bci;
+	}
+
+	public Map<Thread, Debugger> getRunningDebuggers() {
+		Map<Thread, Debugger> runningDebuggers = new HashMap<>();
+		debuggers.forEach((t, dbg) -> {
+			System.out.println("all debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+		});
+		terminatedDebuggers.forEach((t, dbg) -> {
+			System.out.println("terminated debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+		});
+		debuggers.keySet().stream().filter(thread -> !terminatedDebuggers.keySet().contains(thread)).forEach(thread -> {
+			runningDebuggers.put(thread, debuggers.get(thread));
+		});
+		runningDebuggers.forEach((t, dbg) -> {
+			System.out.println("running debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+		});
+		return runningDebuggers;
 	}
 }

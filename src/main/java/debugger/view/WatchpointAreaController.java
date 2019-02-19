@@ -20,6 +20,14 @@ public class WatchpointAreaController {
 	private GridPane gridPane;
 	private int rowCount = 0;
 	
+	public void addWatchpoint() {
+		
+	}
+	
+	public void removeWatchpoint() {
+		
+	}
+	
 	@FXML
 	private void initialize() {
 	    watchpoints.addListener((ListChangeListener.Change<? extends Watchpoint> c) -> {
