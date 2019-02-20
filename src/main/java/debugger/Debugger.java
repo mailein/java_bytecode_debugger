@@ -212,51 +212,57 @@ public class Debugger implements Runnable {
 				// 0. get all breakpoints
 				BreakpointAreaController bpController = GUI.getBreakpointAreaController();
 				ObservableList<LineBreakpoint> lineBreakpoints = bpController.getBreakpoints();
-				// 1. get className from lineBreakpoints
-				List<LineBreakpoint> matchingLinebp = lineBreakpoints.stream().filter(linebp -> {
-					String bpClassName = bpController.getClassName(linebp, this);
-					return (!bpClassName.isEmpty() && bpClassName.equals(className));
-				}).collect(Collectors.toList());
 
-				matchingLinebp.forEach(b -> {
+				// 1. get lineBreakpoints of this className && contains linebp's lineNumber
+				// 1.a. normal className 1.b. anonymous className
+				Map<LineBreakpoint, Location> matchingLinebp = new HashMap<>();
+				for (LineBreakpoint linebp : lineBreakpoints) {
+					String bpClassName = bpController.getClassName(linebp, this);
+					if (!bpClassName.isEmpty() && (bpClassName.equals(className)
+							|| (className.startsWith(bpClassName) && className.contains("$")))) {
+						try {
+							List<Location> locations = classRefType.locationsOfLine(linebp.getLineNumber());
+							if (locations != null && !locations.isEmpty())
+								matchingLinebp.put(linebp, locations.get(0));
+						} catch (AbsentInformationException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				matchingLinebp.forEach((b, l) -> {
 					System.out.println("matching Line breakpoint at line: " + b.getLineNumber());
 				});
 
-				// 2. if !className.isEmpty() && same with the className of this
-				// ClassPrepareEvent, check if already requested by checking if line#
-				// same with any bpReq's locations' line#
-				List<LineBreakpoint> notRequestedMatchingLinebp = new ArrayList<>();
+				// 2. if !className.isEmpty() && matches normal className or anonymous
+				// className, check if already requested by checking if same location
+				Map<LineBreakpoint, Location> notRequestedMatchingLinebp = new HashMap<>();
 				if (matchingLinebp != null && !matchingLinebp.isEmpty()) {
 					List<BreakpointRequest> bpReqs = eventRequestManager.breakpointRequests();
-					for (LineBreakpoint mLinebp : matchingLinebp) {
+					for (Map.Entry<LineBreakpoint, Location> entry : matchingLinebp.entrySet()) {
+						LineBreakpoint mLinebp = entry.getKey();
+						Location loc = entry.getValue();
 						boolean requested = false;
 						for (BreakpointRequest bReq : bpReqs) {
-							if (mLinebp.getLineNumber() == bReq.location().lineNumber()) {
+							if (bReq.location().equals(loc)) {
 								requested = true;
 								break;// must break loop here
 							}
 						}
 						if (!requested) {
-							notRequestedMatchingLinebp.add(mLinebp);
+							notRequestedMatchingLinebp.put(mLinebp, loc);
 						}
 					}
 				}
+
 				// 3. if not requested, then create bpReq and update info in lineBreakpoint
-				notRequestedMatchingLinebp.forEach(nRmLinebp -> {
-					try {
-						List<Location> locations = classRefType.locationsOfLine(nRmLinebp.getLineNumber());
-						if (locations != null && !locations.isEmpty()) {
-							BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(locations.get(0));
-							bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-							bpReq.enable();
-							nRmLinebp.setDebugger(this);
-							nRmLinebp.setReferenceType(classRefType);
-							System.out.println("added breakpoint in classRefType " + classRefType + " at line "
-									+ nRmLinebp.getLineNumber());
-						}
-					} catch (AbsentInformationException e) {
-						e.printStackTrace();
-					}
+				notRequestedMatchingLinebp.forEach((nRmLinebp, loc) -> {
+					BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(loc);
+					bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+					bpReq.enable();
+					nRmLinebp.setDebugger(this);
+					nRmLinebp.setReferenceType(classRefType);
+					System.out.println("added breakpoint in classRefType " + classRefType + " at line "
+							+ nRmLinebp.getLineNumber());
 				});
 			}
 			eventSet.resume();
@@ -399,30 +405,14 @@ public class Debugger implements Runnable {
 		return classes;
 	}
 
-	public List<ReferenceType> getAnonymousClasses(String startingWithClassName) {
+	public List<ReferenceType> getLoadedAnonymousClasses(String startingWithClassName) {
 		List<ReferenceType> anonymousClasses = new ArrayList<>();
 		classes.forEach((className, refType) -> {
-			if (className.startsWith(startingWithClassName) && !className.equals(startingWithClassName))
+			if (className.startsWith(startingWithClassName) && !className.contains("$"))
 				anonymousClasses.add(refType);
 		});
 		return anonymousClasses;
 	}
-
-//	// check if breakpoint of this fileSourcepath and lineNumber has been requested,
-//	// despite enabled or disabled
-//	public boolean existsLineBreakpoint(String fileSourcepath, int lineNumber) {
-//		List<BreakpointRequest> bpReq = eventRequestManager.breakpointRequests();
-//		return bpReq.stream().anyMatch(req -> {
-//			try {
-//				return (SourceClassConversion
-//						.getFileSourcepath(Paths.get(this.sourcepath), Paths.get(req.location().sourcePath()))
-//						.equals(Paths.get(fileSourcepath)) && req.location().lineNumber() == lineNumber);
-//			} catch (AbsentInformationException e) {
-//				e.printStackTrace();
-//				return false;
-//			}
-//		});
-//	}
 
 	@Override
 	public void run() {

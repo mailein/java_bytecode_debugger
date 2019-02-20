@@ -27,22 +27,24 @@ public class BreakpointAreaController {
 	@FXML
 	private AnchorPane anchorPane;
 	private ObservableList<LineBreakpoint> breakpoints = FXCollections.observableArrayList();
-
-	private List<LineBreakpoint> waiting = new ArrayList<>();
+//	private List<LineBreakpoint> waiting = new ArrayList<>();// wrong! because there can be many debuggers
 
 	@FXML
 	private void initialize() {
+		// add new breakpoints to loaded class or anonymous class, if not loaded, leave
+		// it.
 		breakpoints.addListener((ListChangeListener.Change<? extends LineBreakpoint> c) -> {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
-
-						// for the situation: add breakpoints AFTER debuggers launch
-						Map<Thread, Debugger> debuggers = GUI.getThreadAreaController().getRunningDebuggers();
-						debuggers.forEach((t, dbg) -> {
-							String className = getClassName(linebp, dbg);
-							addLineBreakpointToDebugger(linebp, dbg, className);
-						});
+						if (linebp.getReferenceType() == null) {// haven't requested yet
+							// for the situation: add breakpoints AFTER debuggers launch
+							Map<Thread, Debugger> debuggers = GUI.getThreadAreaController().getRunningDebuggers();
+							debuggers.forEach((t, dbg) -> {
+								String className = getClassName(linebp, dbg);
+								addLineBreakpointToDebugger(dbg, className, linebp);
+							});
+						}
 					});
 				}
 				if (c.wasRemoved()) {
@@ -68,7 +70,8 @@ public class BreakpointAreaController {
 		boolean exists = Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS);
 		if (exists) {
 			// 2. if exists, get className and refType
-			System.out.println("trying to set bp for " + dbg.name());
+			// Attention: this className is NEVER a anonymous class' className, need to be
+			// dealt with later
 			String className = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath),
 					Paths.get(linebp.getFileSourcepath()));
 			return className;
@@ -76,20 +79,19 @@ public class BreakpointAreaController {
 		return "";
 	}
 
-	private void addLineBreakpointToDebugger(LineBreakpoint linebp, Debugger dbg, String className) {
-		// 3. check if class loaded or anonymous class problem
+	/**
+	 * @param dbg
+	 * @param        className: normal class or prefix of anonymous class
+	 * @param linebp
+	 */
+	private void addLineBreakpointToDebugger(Debugger dbg, String className, LineBreakpoint linebp) {
+		// 3. add to loaded normal class or loaded anonymous class
 		ReferenceType refType = dbg.getClasses().get(className);
-		if (refType == null) {// class not loaded
-			waiting.add(linebp);
-		} else {
-			if (!addLineBreakpoint(dbg, refType, linebp)) {
-				// get anonymous classes, whose className starts with this className
-				List<ReferenceType> anonymousClasses = dbg.getAnonymousClasses(className);
-				boolean addedToAnony = anonymousClasses.stream().anyMatch(ac -> addLineBreakpoint(dbg, ac, linebp));
-				if (!addedToAnony)
-					waiting.add(linebp);
-			}
-		}
+		if (refType != null && !addLineBreakpoint(dbg, refType, linebp)) {
+			List<ReferenceType> anonymousClasses = dbg.getLoadedAnonymousClasses(className);
+			anonymousClasses.forEach(ac -> addLineBreakpoint(dbg, ac, linebp));
+		} // else: normal class not loaded, leave it, wait for it to be loaded in
+			// Debugger, then add linebp there
 	}
 
 	private boolean addLineBreakpoint(Debugger dbg, ReferenceType refType, LineBreakpoint linebp) {
