@@ -45,6 +45,19 @@ public class SourceClassConversion {
 		return fileClasspath;
 	}
 	
+	/**
+	 * @param sourcepath: debugger's sourcepath, eg. path\to\debugger
+	 * @param locationSourcepath: fileSourcepath with no leading sourcepath and no leading fileSeparator, eg. count\Main.java
+	 * @return fileSourcepath, eg. path\to\debugger\count\Main.java
+	 */
+	public static Path getFileSourcepath(Path sourcepath, Path locationSourcepath) {
+		Path fileSourcepath = sourcepath;
+		for(int i = 0; i < locationSourcepath.getNameCount(); i++) {
+			fileSourcepath = fileSourcepath.resolve(locationSourcepath.getName(i));
+		}
+		return fileSourcepath;
+	}
+	
 	public static void main(String[] args) {
 		Path dir = Paths.get("/Users/m/", "/Desktop/debugger/countdownZuZweit/");
 		Path sourcepath = dir.resolve("src");

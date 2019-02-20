@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.sun.jdi.AbsentInformationException;
-import com.sun.jdi.ClassNotPreparedException;
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
 import com.sun.jdi.request.BreakpointRequest;
@@ -38,48 +36,60 @@ public class BreakpointAreaController {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
-						
-						//TODO if debugger not running
-						
-						
+
+						// for the situation: add breakpoints AFTER debuggers launch
 						Map<Thread, Debugger> debuggers = GUI.getThreadAreaController().getRunningDebuggers();
 						debuggers.forEach((t, dbg) -> {
-							String sourcepath = dbg.sourcepath();
-							String classpath = dbg.classpath();
-							// 1. check if fileClasspath exists
-							Path fileClasspath = SourceClassConversion.mapFileSourcepath2FileClasspath(
-									Paths.get(sourcepath), Paths.get(classpath), Paths.get(linebp.getFileSourcepath()));
-							boolean exists = Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS);
-							if (exists) {
-								// 2. if exists, get className and refType
-								linebp.setDebugger(dbg);
-								System.out.println("trying to set bp for " + t.getName() + ", " + dbg.name());
-								String className = SourceClassConversion.mapFileSourcepath2ClassName(
-										Paths.get(sourcepath), Paths.get(linebp.getFileSourcepath()));
-								ReferenceType refType = dbg.getClasses().get(className);
-								// 3. check if class loaded or anonymous class problem
-								if (refType == null) {// class not loaded
-									waiting.add(linebp);
-								} else {
-									if (!addLineBreakpoint(dbg, refType, linebp)) {
-										// get anonymous classes, whose className starts with this className
-										List<ReferenceType> anonymousClasses = dbg.getAnonymousClasses(className);
-										boolean addedToAnony = anonymousClasses.stream()
-												.anyMatch(ac -> addLineBreakpoint(dbg, ac, linebp));
-										if (!addedToAnony)
-											waiting.add(linebp);
-									}
-								}
-							}
+							String className = getClassName(linebp, dbg);
+							addLineBreakpointToDebugger(linebp, dbg, className);
 						});
 					});
 				}
 				if (c.wasRemoved()) {
 					c.getRemoved().forEach(thread -> {
+						// TODO
 					});
 				}
 			}
 		});
+	}
+
+	/**
+	 * @param linebp
+	 * @param dbg
+	 * @return "", if this LineBreakpoint doesn't belong to this Debugger
+	 */
+	public String getClassName(LineBreakpoint linebp, Debugger dbg) {
+		String sourcepath = dbg.sourcepath();
+		String classpath = dbg.classpath();
+		// 1. check if fileClasspath exists
+		Path fileClasspath = SourceClassConversion.mapFileSourcepath2FileClasspath(Paths.get(sourcepath),
+				Paths.get(classpath), Paths.get(linebp.getFileSourcepath()));
+		boolean exists = Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS);
+		if (exists) {
+			// 2. if exists, get className and refType
+			System.out.println("trying to set bp for " + dbg.name());
+			String className = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath),
+					Paths.get(linebp.getFileSourcepath()));
+			return className;
+		}
+		return "";
+	}
+
+	private void addLineBreakpointToDebugger(LineBreakpoint linebp, Debugger dbg, String className) {
+		// 3. check if class loaded or anonymous class problem
+		ReferenceType refType = dbg.getClasses().get(className);
+		if (refType == null) {// class not loaded
+			waiting.add(linebp);
+		} else {
+			if (!addLineBreakpoint(dbg, refType, linebp)) {
+				// get anonymous classes, whose className starts with this className
+				List<ReferenceType> anonymousClasses = dbg.getAnonymousClasses(className);
+				boolean addedToAnony = anonymousClasses.stream().anyMatch(ac -> addLineBreakpoint(dbg, ac, linebp));
+				if (!addedToAnony)
+					waiting.add(linebp);
+			}
+		}
 	}
 
 	private boolean addLineBreakpoint(Debugger dbg, ReferenceType refType, LineBreakpoint linebp) {
@@ -97,6 +107,7 @@ public class BreakpointAreaController {
 			breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 			breakpointRequest.enable();
 			System.out.println("added Breakpoint for " + refType + " at line: " + linebp.getLineNumber());
+			linebp.setDebugger(dbg);
 			linebp.setReferenceType(refType);
 			return true;
 		}

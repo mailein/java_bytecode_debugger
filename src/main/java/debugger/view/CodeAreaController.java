@@ -84,9 +84,9 @@ public class CodeAreaController {
 						e.printStackTrace();
 					}
 					if(visible) {//remove breakpoint
-						GUI.getBreakpointAreaController().getBreakpoints().remove(new LineBreakpoint(fileSourcepath, lineNumber));
+						GUI.getBreakpointAreaController().getBreakpoints().remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
 					}else {//add breakpoint
-						GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber));
+						GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
 					}
 				}
 				activateClasspath();

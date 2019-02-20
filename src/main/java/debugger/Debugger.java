@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
@@ -45,13 +46,16 @@ import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
 import com.sun.jdi.event.VMStartEvent;
+import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
+import debugger.dataType.LineBreakpoint;
 import debugger.misc.SourceClassConversion;
+import debugger.view.BreakpointAreaController;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -67,7 +71,8 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className, refType>
+	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
+																								// refType>
 
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
@@ -77,7 +82,7 @@ public class Debugger implements Runnable {
 	private boolean debugMode;
 
 	/**
-	 * @param mainClass is complete name, eg. countdownZuZweit.Main
+	 * @param mainClass  is complete name, eg. countdownZuZweit.Main
 	 * @param sourcepath
 	 * @param classpath
 	 * @param debugMode
@@ -198,27 +203,67 @@ public class Debugger implements Runnable {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
 			ReferenceType classRefType = classPrepareEvent.referenceType();
 			String className = classRefType.name();
-			//filter only those classes on classpath
+			// filter only those classes on classpath
 			Path fileClasspath = SourceClassConversion.mapClassName2FileClasspath(className, Paths.get(classpath));
-			if(Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
+			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
-				List<Location> locations = classRefType.locationsOfLine(30);
-				System.out.println("--------\n" + "className: " + className + ", classRefType's all line location: " + classRefType.allLineLocations() + " is already prepared.");
-				System.out.println("--------\n" + "className: " + className + ", classRefType's all fields: " + classRefType.allFields() + " is already prepared.");
-				classRefType.allFields().forEach(f -> {
-					System.out.println("declaringType: " + f.declaringType());
-					System.out.println("genericSignature: " + f.genericSignature());
-					System.out.println("name: " + f.name());
-					System.out.println("signature: " + f.signature());
+
+				// for the situation: add breakpoints BEFORE debuggers launch
+				// 0. get all breakpoints
+				BreakpointAreaController bpController = GUI.getBreakpointAreaController();
+				ObservableList<LineBreakpoint> lineBreakpoints = bpController.getBreakpoints();
+				// 1. get className from lineBreakpoints
+				List<LineBreakpoint> matchingLinebp = lineBreakpoints.stream().filter(linebp -> {
+					String bpClassName = bpController.getClassName(linebp, this);
+					return (!bpClassName.isEmpty() && bpClassName.equals(className));
+				}).collect(Collectors.toList());
+
+				matchingLinebp.forEach(b -> {
+					System.out.println("matching Line breakpoint at line: " + b.getLineNumber());
 				});
-				System.out.println("--------\n" + "className: " + className + ", classRefType's all methods: " + classRefType.allMethods() + " is already prepared.");
-				System.out.println("locations: " + (locations == null) + locations);
+
+				// 2. if !className.isEmpty() && same with the className of this
+				// ClassPrepareEvent, check if already requested by checking if line#
+				// same with any bpReq's locations' line#
+				List<LineBreakpoint> notRequestedMatchingLinebp = new ArrayList<>();
+				if (matchingLinebp != null && !matchingLinebp.isEmpty()) {
+					List<BreakpointRequest> bpReqs = eventRequestManager.breakpointRequests();
+					for (LineBreakpoint mLinebp : matchingLinebp) {
+						boolean requested = false;
+						for (BreakpointRequest bReq : bpReqs) {
+							if (mLinebp.getLineNumber() == bReq.location().lineNumber()) {
+								requested = true;
+								break;// must break loop here
+							}
+						}
+						if (!requested) {
+							notRequestedMatchingLinebp.add(mLinebp);
+						}
+					}
+				}
+				// 3. if not requested, then create bpReq and update info in lineBreakpoint
+				notRequestedMatchingLinebp.forEach(nRmLinebp -> {
+					try {
+						List<Location> locations = classRefType.locationsOfLine(nRmLinebp.getLineNumber());
+						if (locations != null && !locations.isEmpty()) {
+							BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(locations.get(0));
+							bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+							bpReq.enable();
+							nRmLinebp.setDebugger(this);
+							nRmLinebp.setReferenceType(classRefType);
+							System.out.println("added breakpoint in classRefType " + classRefType + " at line "
+									+ nRmLinebp.getLineNumber());
+						}
+					} catch (AbsentInformationException e) {
+						e.printStackTrace();
+					}
+				});
 			}
 			eventSet.resume();
-		} else if(event instanceof ClassUnloadEvent) {
+		} else if (event instanceof ClassUnloadEvent) {
 			ClassUnloadEvent classUnloadEvent = (ClassUnloadEvent) event;
 			String className = classUnloadEvent.className();
-			//no need to filter, because classes are inside Debugger
+			// no need to filter, because classes are inside Debugger
 			classes.remove(className);
 			System.out.println("--------\n" + "className: " + className + " is unloaded.");
 			eventSet.resume();
@@ -329,11 +374,11 @@ public class Debugger implements Runnable {
 	public String name() {
 		return mainClassName;
 	}
-	
+
 	public String sourcepath() {
 		return sourcepath;
 	}
-	
+
 	public String classpath() {
 		return classpath;
 	}
@@ -354,15 +399,31 @@ public class Debugger implements Runnable {
 		return classes;
 	}
 
-	public List<ReferenceType> getAnonymousClasses(String startingWithClassName){
+	public List<ReferenceType> getAnonymousClasses(String startingWithClassName) {
 		List<ReferenceType> anonymousClasses = new ArrayList<>();
 		classes.forEach((className, refType) -> {
-			if(className.startsWith(startingWithClassName) && !className.equals(startingWithClassName))
+			if (className.startsWith(startingWithClassName) && !className.equals(startingWithClassName))
 				anonymousClasses.add(refType);
 		});
 		return anonymousClasses;
 	}
-	
+
+//	// check if breakpoint of this fileSourcepath and lineNumber has been requested,
+//	// despite enabled or disabled
+//	public boolean existsLineBreakpoint(String fileSourcepath, int lineNumber) {
+//		List<BreakpointRequest> bpReq = eventRequestManager.breakpointRequests();
+//		return bpReq.stream().anyMatch(req -> {
+//			try {
+//				return (SourceClassConversion
+//						.getFileSourcepath(Paths.get(this.sourcepath), Paths.get(req.location().sourcePath()))
+//						.equals(Paths.get(fileSourcepath)) && req.location().lineNumber() == lineNumber);
+//			} catch (AbsentInformationException e) {
+//				e.printStackTrace();
+//				return false;
+//			}
+//		});
+//	}
+
 	@Override
 	public void run() {
 		try {

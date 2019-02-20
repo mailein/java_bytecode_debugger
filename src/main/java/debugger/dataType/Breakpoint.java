@@ -12,7 +12,7 @@ public abstract class Breakpoint {
 	
 	//to be deduced
 	private Debugger debugger = null;//running debugger
-	private ReferenceType referenceType = null;//*.class of this breakpoint
+	private ReferenceType referenceType = null;//*.class of this breakpoint, if not null, then debugger has created breakpoint request
 	private boolean toBeDisabled = false;//TODO
 	
 	public Breakpoint(String fileSourcepath, int lineNumber) {
