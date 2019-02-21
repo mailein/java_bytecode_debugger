@@ -73,7 +73,6 @@ public class Debugger implements Runnable {
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
-
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
 	private String mainClassName;
@@ -256,13 +255,22 @@ public class Debugger implements Runnable {
 
 				// 3. if not requested, then create bpReq and update info in lineBreakpoint
 				notRequestedMatchingLinebp.forEach((nRmLinebp, loc) -> {
+					//request
 					BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(loc);
 					bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 					bpReq.enable();
-					nRmLinebp.setDebugger(this);
-					nRmLinebp.setReferenceType(classRefType);
 					System.out.println("added breakpoint in classRefType " + classRefType + " at line "
 							+ nRmLinebp.getLineNumber());
+					//update nRmlinebp
+					String sourceName = "";
+					try {
+						sourceName = loc.sourceName();
+					} catch (AbsentInformationException e) {
+						e.printStackTrace();
+					}
+					sourceName = sourceName.substring(0, sourceName.indexOf(".java"));
+					String methodSignature = loc.method().signature();
+					nRmLinebp.updateInfo(eventRequestManager, classRefType, loc, sourceName, methodSignature);
 				});
 			}
 			eventSet.resume();
@@ -287,6 +295,7 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
 			// TODO resume controlled by GUI/ controller
+			eventSet.resume();
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
 			StepEvent stepEvent = (StepEvent) event;
 			ThreadReference thread = stepEvent.thread();

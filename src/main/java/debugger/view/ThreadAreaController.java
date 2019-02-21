@@ -1,6 +1,5 @@
 package debugger.view;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +89,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		s = terminatedMarker + s;
 		dbgTreeItem.setValue(s);
 
-		terminatedDebuggers.put(t, debugger);
+		terminatedDebuggers.put(t, debugger);// can not remove this debugger yet
 
 		// remove all treeItems under this debugger other than debuggerTreeItem
 		removeDebuggerChildrenFromTree(debugger, t);
@@ -230,18 +229,18 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 
 	public Map<Thread, Debugger> getRunningDebuggers() {
 		Map<Thread, Debugger> runningDebuggers = new HashMap<>();
-		debuggers.forEach((t, dbg) -> {
-			System.out.println("all debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-		});
-		terminatedDebuggers.forEach((t, dbg) -> {
-			System.out.println("terminated debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-		});
+//		debuggers.forEach((t, dbg) -> {
+//			System.out.println("all debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+//		});
+//		terminatedDebuggers.forEach((t, dbg) -> {
+//			System.out.println("terminated debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+//		});
 		debuggers.keySet().stream().filter(thread -> !terminatedDebuggers.keySet().contains(thread)).forEach(thread -> {
 			runningDebuggers.put(thread, debuggers.get(thread));
 		});
-		runningDebuggers.forEach((t, dbg) -> {
-			System.out.println("running debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-		});
+//		runningDebuggers.forEach((t, dbg) -> {
+//			System.out.println("running debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
+//		});
 		return runningDebuggers;
 	}
 }

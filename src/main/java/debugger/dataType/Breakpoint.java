@@ -1,8 +1,14 @@
 package debugger.dataType;
 
-import com.sun.jdi.ReferenceType;
+import java.util.ArrayList;
+import java.util.List;
 
-import debugger.Debugger;
+import com.sun.jdi.Location;
+import com.sun.jdi.ReferenceType;
+import com.sun.jdi.request.EventRequestManager;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 public abstract class Breakpoint {
 
@@ -11,29 +17,21 @@ public abstract class Breakpoint {
 	private int lineNumber;
 	
 	//to be deduced
-	private Debugger debugger = null;//running debugger
-	private ReferenceType referenceType = null;//*.class of this breakpoint, if not null, then debugger has created breakpoint request
-	private boolean toBeDisabled = false;//TODO
+	protected List<EventRequestManager> eventReqMgrs = new ArrayList<>();//running debugger//TODO debuggers
+	protected ReferenceType referenceType = null;//*.class of this breakpoint, if not null, then debugger has created breakpoint request
+	protected Location loc = null;
+	protected boolean toBeDisabled = false;//TODO
+	protected BooleanProperty updatedOnceProperty = new SimpleBooleanProperty(false);
 	
 	public Breakpoint(String fileSourcepath, int lineNumber) {
 		this.fileSourcepath = fileSourcepath;
 		this.lineNumber = lineNumber;
 	}
 
-	public abstract void add();
-	public abstract void remove();
-	public abstract void disable();
 	public abstract boolean isLineBreakpoint();
 	public abstract boolean isWatchpoint();
 	
-//	public boolean isWaitForClassLoaded() {
-//		return waitForClassLoaded;
-//	}
-//
-//	public void setWaitForClassLoaded(boolean waitForClassLoaded) {
-//		this.waitForClassLoaded = waitForClassLoaded;
-//	}
-
+	
 	public String getFileSourcepath() {
 		return fileSourcepath;
 	}
@@ -42,20 +40,16 @@ public abstract class Breakpoint {
 		return lineNumber;
 	}
 	
+	public List<EventRequestManager> getEventReqMgrs() {
+		return eventReqMgrs;
+	}
+
 	public ReferenceType getReferenceType() {
 		return referenceType;
 	}
 
-	public void setReferenceType(ReferenceType refType) {
-		this.referenceType = refType;
-	}
-
-	public Debugger getDebugger() {
-		return debugger;
-	}
-
-	public void setDebugger(Debugger debugger) {
-		this.debugger = debugger;
+	public Location getLoc() {
+		return loc;
 	}
 
 	public boolean isToBeDisabled() {
@@ -66,6 +60,10 @@ public abstract class Breakpoint {
 		this.toBeDisabled = toBeDisabled;
 	}
 	
+	public BooleanProperty updatedOnceProperty() {
+		return updatedOnceProperty;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if(!(o instanceof Breakpoint))

@@ -1,45 +1,44 @@
 package debugger.dataType;
 
 import com.sun.jdi.Location;
-import com.sun.jdi.request.BreakpointRequest;
-import com.sun.jdi.request.EventRequest;
+import com.sun.jdi.ReferenceType;
 import com.sun.jdi.request.EventRequestManager;
 
 public class LineBreakpoint extends Breakpoint {
 
+	private String sourceName = "";
+	private String methodSignature = "";
+	
 	public LineBreakpoint(String fileSourcepath, int lineNumber) {
 		super(fileSourcepath, lineNumber);
 	}
 
-
-	private void setBreakpoint(EventRequestManager eventReqMgr, Location loc) {
-		BreakpointRequest breakpointRequest = eventReqMgr.createBreakpointRequest(loc);
-		breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-		breakpointRequest.enable();
+	/**
+	 * @param eventReqMgr: specify every time
+	 * @param refType: no need to specify if updated once
+	 * @param loc: no need to specify if updated once
+	 * @param sourceName: no need to specify if updated once
+	 * @param methodSignature: no need to specify if updated once
+	 */
+	public void updateInfo(EventRequestManager eventReqMgr, ReferenceType refType, Location loc, String sourceName, String methodSignature) {
+		this.eventReqMgrs.add(eventReqMgr);
+		if(!this.updatedOnceProperty.get()) {//I think these will be the same for this Breakpoint
+			this.referenceType = refType;
+			this.loc = loc;
+			this.sourceName = sourceName;
+			this.methodSignature = methodSignature;
+			this.updatedOnceProperty.set(true);
+		}
 	}
 
-
-	@Override
-	public void add() {
-		// TODO Auto-generated method stub
-		
+	public String getSourceName() {
+		return sourceName;
 	}
 
-
-	@Override
-	public void remove() {
-		// TODO Auto-generated method stub
-		
+	public String getMethodSignature() {
+		return methodSignature;
 	}
-
-
-	@Override
-	public void disable() {
-		// TODO Auto-generated method stub
-		
-	}
-
-
+	
 	@Override
 	public boolean isLineBreakpoint() {
 		return true;
