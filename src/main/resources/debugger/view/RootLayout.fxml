@@ -39,14 +39,14 @@
                   <Button fx:id="runButton" mnemonicParsing="false" onAction="#handleRun" text="Run" />
                   <Button fx:id="debugButton" mnemonicParsing="false" onAction="#handleDebug" text="Debug" />
                   <Separator orientation="VERTICAL" />
-                  <Button fx:id="resumeButton" mnemonicParsing="false" text="Resume" />
+                  <Button fx:id="resumeButton" mnemonicParsing="false" onAction="#handleResume" text="Resume" />
                   <Button fx:id="suspendButton" mnemonicParsing="false" text="Suspend" />
-                  <Button fx:id="terminateButton" mnemonicParsing="false" text="Terminate" />
+                  <Button fx:id="terminateButton" mnemonicParsing="false" onAction="#handleTerminate" text="Terminate" />
                   <Separator orientation="VERTICAL" />
-                <Button fx:id="stepIButton" mnemonicParsing="false" text="Stepi" />
-                  <Button fx:id="stepIntoButton" mnemonicParsing="false" text="StepInto" />
-                  <Button fx:id="stepOverButton" mnemonicParsing="false" text="StepOver" />
-                  <Button fx:id="StepReturnButton" mnemonicParsing="false" text="StepReturn" />
+                <Button fx:id="stepIButton" mnemonicParsing="false" onAction="#handleStepi" text="Stepi" />
+                  <Button fx:id="stepIntoButton" mnemonicParsing="false" onAction="#handleStepInto" text="StepInto" />
+                  <Button fx:id="stepOverButton" mnemonicParsing="false" onAction="#handleStepOver" text="StepOver" />
+                  <Button fx:id="StepReturnButton" mnemonicParsing="false" onAction="#handleStepReturn" text="StepReturn" />
               </items>
             </ToolBar>
          </children>

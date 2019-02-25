@@ -1,4 +1,4 @@
 Manifest-Version: 1.0
-Main-Class: Main
+Main-Class: debugger.Main
 Class-Path: .
 

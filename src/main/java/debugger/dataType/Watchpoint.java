@@ -1,43 +1,43 @@
 package debugger.dataType;
 
-import com.sun.jdi.Location;
-import com.sun.jdi.ReferenceType;
-import com.sun.jdi.request.EventRequestManager;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Watchpoint extends Breakpoint{
+import com.sun.jdi.Field;
+
+public class Watchpoint{
+
+	// TODO if contains . then "count.Main.n", "Main.n", "n" are all correct
+	//field.toString(): complete name, eg. "count.Main.n"
+	//field.name(): name, eg. "n"
+	private String name = "";// global variable, if local get it from localVarAreaController
 	
-	private String fieldName = "";
+	private List<Field> fields = new ArrayList<>();
 	
-	public Watchpoint(String fileSourcepath, int lineNumber) {
-		super(fileSourcepath, lineNumber);
+	
+	public Watchpoint(String name) {
+		this.name = name;
 	}
-	//TODO if contains . eg. C.ccc then it can be evaluated if ccc is static in class C
-	//but no need to test for static, just get the refType and the field
 
-	public void updateInfo(EventRequestManager eventReqMgr, ReferenceType refType, Location loc, String fieldName) {
-		this.eventReqMgrs.add(eventReqMgr);
-		if(!this.updatedOnceProperty.get()) {//I think these will be the same for this Breakpoint
-			this.referenceType = refType;
-			this.loc = loc;
-			this.fieldName = fieldName;
-			this.updatedOnceProperty.set(true);
+//	public void updateInfo(EventRequestManager eventReqMgr, ReferenceType refType, Location loc) {
+//		this.eventReqMgrs.add(eventReqMgr);
+//		if (!this.updatedOnceProperty.get()) {// I think these will be the same for this Breakpoint
+//			this.referenceType = refType;
+//			this.loc = loc;
+//			this.updatedOnceProperty.set(true);
+//		}
+//	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String strip2fieldName() {
+		String fieldName = name;
+		if(fieldName.contains(".")) {
+			int index = fieldName.lastIndexOf(".");
+			fieldName = fieldName.substring(index + 1);
 		}
-	}
-	
-	public String getFieldName() {
 		return fieldName;
 	}
-
-	@Override
-	public boolean isLineBreakpoint() {
-		return false;
-	}
-
-	@Override
-	public boolean isWatchpoint() {
-		return true;
-	}
-	
-	
-	
 }

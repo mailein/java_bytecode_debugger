@@ -4,8 +4,15 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.sun.jdi.StackFrame;
+import com.sun.jdi.ThreadReference;
+import com.sun.jdi.request.EventRequest;
+import com.sun.jdi.request.EventRequestManager;
+import com.sun.jdi.request.StepRequest;
+
 import debugger.Debugger;
 import debugger.GUI;
+import debugger.Main;
 import debugger.dataType.Configuration;
 import debugger.misc.SourceClassConversion;
 import javafx.fxml.FXML;
@@ -59,7 +66,7 @@ public class RootLayoutController {
 	@FXML
 	private Button resumeButton;
 	@FXML
-	private Button suspendButton;
+	private Button suspendButton;//TODO
 	@FXML
 	private Button terminateButton;
 
@@ -373,20 +380,87 @@ public class RootLayoutController {
 			GUI.getConfigurations().put(mainClass, config);
 
 			// debugger and thread
-			Debugger debugger = new Debugger(mainClass, sourcepath, classpath, debugMode);// TODO add progArg to
-																							// where???
-			Thread t = new Thread(debugger);
-			GUI.getThreadAreaController().removeAllTerminatedDebugger();
-			GUI.getThreadAreaController().addDebugger(debugger, t);
-			t.start();
-			t.join();
-			GUI.getThreadAreaController().applyTerminatedMarker(debugger, t);
-			System.out.println("debugger thread died");
+			Main.setMainClass(mainClass);
+			Main.setSourcepath(sourcepath);
+			Main.setClasspath(classpath);
+			Main.setDebugMode(debugMode);
+			Main.getNewDebugger().set(true);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
+	@FXML
+	private void handleResume() {
+		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
+		currentDebugger.resume();
+	}
+	
+	@FXML
+	private void handleTerminate() {
+		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
+		currentDebugger.terminate();
+	}
+	
+	class StepCommand {
+		private EventRequestManager eventReqMgr;
+		private ThreadReference thread;
+		private int size;
+		private int depth;
+		
+		public StepCommand(Debugger debugger, ThreadReference thread, int size, int depth) {
+			this.eventReqMgr = debugger.getEventRequestManager();
+			this.thread = thread;
+			this.size = size;
+			this.depth = depth;
+		}
+		
+		public void execute() {
+			// delete step request of current thread
+			List<StepRequest> stepRequests = eventReqMgr.stepRequests();
+			for (StepRequest s : stepRequests) {
+				if (s.thread().equals(thread))
+					eventReqMgr.deleteEventRequest(s);
+			}
+
+			System.out.println(thread.name() + " sets a new stepi request");
+			StepRequest stepRequest = eventReqMgr.createStepRequest(thread, size, depth);
+			stepRequest.addCountFilter(1);
+			stepRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+			stepRequest.enable();
+		}
+	}
+	
+	@FXML
+	private void handleStepi() {
+		handleSomeStep(StepRequest.STEP_MIN, StepRequest.STEP_INTO);
+	}
+	
+	@FXML
+	private void handleStepInto() {
+		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_INTO);
+	}
+	
+	@FXML
+	private void handleStepOver() {
+		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+	}
+	
+	@FXML
+	private void handleStepReturn() {
+		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_OUT);
+	}
+	
+	private void handleSomeStep(int size, int depth) {
+		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
+		Debugger currentDebugger = threadAreaController.getSelectedDebugger();
+		ThreadReference currentThread = threadAreaController.getSelectedThread();
+		StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
+		stepi.execute();
+		currentDebugger.resume();
+	}
+	
 	public void setOverviewController(OverviewController overviewController) {
 		this.overviewController = overviewController;
 		this.codeAreaController = this.overviewController.getCodeAreaController();

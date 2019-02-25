@@ -81,6 +81,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		addDebuggerToTree(debugger, t);
 		System.out.println("added debugger to tree------------");
 		System.out.println(debugger.getThreads().size());
+		this.selectedDebugger = debugger;
 	}
 
 	public void applyTerminatedMarker(Debugger debugger, Thread t) {
@@ -242,5 +243,27 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 //			System.out.println("running debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
 //		});
 		return runningDebuggers;
+	}
+
+	public Debugger getSelectedDebugger() {
+		if (selectedDebugger != null && selectedThread == null) {
+			this.selectedThread = selectedDebugger.getMainThread();
+			if (selectedThread != null) {
+				try {
+					this.selectedStack = this.selectedThread.frame(0);
+				} catch (IncompatibleThreadStateException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return selectedDebugger;
+	}
+
+	public ThreadReference getSelectedThread() {
+		return selectedThread;
+	}
+
+	public StackFrame getSelectedStack() {
+		return selectedStack;
 	}
 }

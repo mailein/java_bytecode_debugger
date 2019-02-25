@@ -48,7 +48,7 @@ configurations.implementation.setCanBeResolved(true)
 
 jar {
 	manifest {
-		attributes('Main-Class': 'Main', 'Class-Path': '.')
+		attributes('Main-Class': 'debugger.Main', 'Class-Path': '.')
 	}
 	from{
 		configurations.implementation.collect {it.isDirectory() ? it : zipTree(it)}

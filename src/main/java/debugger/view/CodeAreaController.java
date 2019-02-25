@@ -54,10 +54,10 @@ public class CodeAreaController {
 	private AnchorPane anchorPane = new AnchorPane();
 	@FXML
 	private TabPane tabPane = new TabPane();
-	@FXML
-	private Label classpathLabel = new Label("classpath");
-	@FXML
-	private TextField classpathTextField = new TextField();
+//	@FXML
+//	private Label classpathLabel = new Label("classpath");
+//	@FXML
+//	private TextField classpathTextField = new TextField();
 	
 	private int newCount = 1;
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
@@ -89,7 +89,7 @@ public class CodeAreaController {
 						GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
 					}
 				}
-				activateClasspath();
+//				activateClasspath();
 			});
 			return label;
 		}
@@ -116,39 +116,39 @@ public class CodeAreaController {
 		}
     }
 	
-	private void activateClasspath() {
-		if(!classpathTextField.isVisible()) {
-			classpathTextField.setVisible(true);
-			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
-		}
-	}
-	
-	private void deactivateClasspath() {
-		if(classpathTextField.isVisible()) {
-			classpathTextField.setVisible(false);
-			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-		}
-	}
-	
-	private void toggleClasspath() {
-		boolean isActive = classpathTextField.isVisible();
-		classpathTextField.setVisible(!isActive);
-		if(isActive) {
-			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-		}else {
-			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
-		}
-	}
+//	private void activateClasspath() {
+//		if(!classpathTextField.isVisible()) {
+//			classpathTextField.setVisible(true);
+//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
+//		}
+//	}
+//	
+//	private void deactivateClasspath() {
+//		if(classpathTextField.isVisible()) {
+//			classpathTextField.setVisible(false);
+//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//		}
+//	}
+//	
+//	private void toggleClasspath() {
+//		boolean isActive = classpathTextField.isVisible();
+//		classpathTextField.setVisible(!isActive);
+//		if(isActive) {
+//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//		}else {
+//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
+//		}
+//	}
 	
 	@FXML
 	private void initialize() {// happens after constructor
-		classpathLabel.setCursor(Cursor.HAND);
-		classpathLabel.setOnMouseClicked(event -> toggleClasspath());
-		classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-		classpathTextField.setMinWidth(150.0);
-		classpathTextField.prefColumnCountProperty().bind(classpathTextField.textProperty().length());
-		classpathTextField.setVisible(true);
-		classpathTextField.textProperty().bindBidirectional(GUI.getClasspath());		
+//		classpathLabel.setCursor(Cursor.HAND);
+//		classpathLabel.setOnMouseClicked(event -> toggleClasspath());
+//		classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//		classpathTextField.setMinWidth(150.0);
+//		classpathTextField.prefColumnCountProperty().bind(classpathTextField.textProperty().length());
+//		classpathTextField.setVisible(true);
+//		classpathTextField.textProperty().bindBidirectional(GUI.getClasspath());		
 		
 		// update selectedTab
 		this.tabPane.getSelectionModel().selectedItemProperty()
@@ -167,7 +167,7 @@ public class CodeAreaController {
 
 	// handle MenuItems: New and Open
 	public void newTab(File file) {
-		activateClasspath();
+//		activateClasspath();
 		// get name and content
 		String tempName = file.getName();
 		String content = "";

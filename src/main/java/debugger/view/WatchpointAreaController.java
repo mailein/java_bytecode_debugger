@@ -10,23 +10,16 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 
 public class WatchpointAreaController {
 
-	ObservableList<Watchpoint> watchpoints = FXCollections.observableArrayList();
+	private ObservableList<Watchpoint> watchpoints = FXCollections.observableArrayList();
 	
 	@FXML
 	private GridPane gridPane;
 	private int rowCount = 0;
-	
-	public void addWatchpoint() {
-		
-	}
-	
-	public void removeWatchpoint() {
-		
-	}
 	
 	@FXML
 	private void initialize() {
@@ -36,6 +29,15 @@ public class WatchpointAreaController {
 //		gridPane.setHgap(0);
 //		gridPane.setVgap(0);
 		addNewRow();
+	}
+	
+	//after debugger launch
+	private void addWatchpoint() {
+		
+	}
+	
+	private void removeWatchpoint() {
+		
 	}
 	
 	//whenever user inputs in last line 
@@ -69,4 +71,9 @@ public class WatchpointAreaController {
 		}
 		rowCount--;//assert the row is actually deleted
 	}
+
+	public ObservableList<Watchpoint> getWatchpoints() {
+		return watchpoints;
+	}
+	
 }

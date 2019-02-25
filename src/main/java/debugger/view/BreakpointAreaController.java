@@ -66,7 +66,10 @@ public class BreakpointAreaController {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
 						// view
-						addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
+						linebp.updatedOnceProperty().addListener((obs, ov, nv) -> {
+							if(nv)
+								addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
+						});
 
 						// for the situation: add breakpoints AFTER debuggers launch
 						Map<Thread, Debugger> debuggers = GUI.getThreadAreaController().getRunningDebuggers();
