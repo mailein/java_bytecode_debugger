@@ -36,8 +36,10 @@ public class Main {
 				GUI.getThreadAreaController().removeAllTerminatedDebugger();
 				GUI.getThreadAreaController().addDebugger(debugger, t);
 				t.start();
+				GUI.getRootLayoutController().disableRunOrDebug();
 				try {
 					t.join();
+					GUI.getRootLayoutController().enableRunOrDebug();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

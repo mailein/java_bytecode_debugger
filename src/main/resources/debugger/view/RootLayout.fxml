@@ -46,7 +46,7 @@
                 <Button fx:id="stepIButton" mnemonicParsing="false" onAction="#handleStepi" text="Stepi" />
                   <Button fx:id="stepIntoButton" mnemonicParsing="false" onAction="#handleStepInto" text="StepInto" />
                   <Button fx:id="stepOverButton" mnemonicParsing="false" onAction="#handleStepOver" text="StepOver" />
-                  <Button fx:id="StepReturnButton" mnemonicParsing="false" onAction="#handleStepReturn" text="StepReturn" />
+                  <Button fx:id="stepReturnButton" mnemonicParsing="false" onAction="#handleStepReturn" text="StepReturn" />
               </items>
             </ToolBar>
          </children>

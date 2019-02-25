@@ -15,6 +15,7 @@ import debugger.GUI;
 import debugger.Main;
 import debugger.dataType.Configuration;
 import debugger.misc.SourceClassConversion;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -24,6 +25,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -58,7 +60,7 @@ public class RootLayoutController {
 	@FXML
 	private Button stepOverButton;
 	@FXML
-	private Button StepReturnButton;
+	private Button stepReturnButton;
 	@FXML
 	private Button runButton;
 	@FXML
@@ -66,7 +68,7 @@ public class RootLayoutController {
 	@FXML
 	private Button resumeButton;
 	@FXML
-	private Button suspendButton;//TODO
+	private Button suspendButton;// TODO
 	@FXML
 	private Button terminateButton;
 
@@ -83,6 +85,32 @@ public class RootLayoutController {
 		this.saveMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
 		this.saveAsMenuItem.setAccelerator(
 				new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+		this.newButton.setTooltip(new Tooltip("Ctrl+N"));
+		this.openButton.setTooltip(new Tooltip("Ctrl+O"));
+		this.saveButton.setTooltip(new Tooltip("Ctrl+S"));
+		this.resumeButton.setTooltip(new Tooltip("F8"));
+		this.suspendButton.setTooltip(new Tooltip("F9"));
+		this.terminateButton.setTooltip(new Tooltip("Ctrl+F2"));
+		this.stepIButton.setTooltip(new Tooltip("F4"));
+		this.stepIntoButton.setTooltip(new Tooltip("F5"));
+		this.stepOverButton.setTooltip(new Tooltip("F6"));
+		this.stepReturnButton.setTooltip(new Tooltip("F7"));
+		Platform.runLater(() -> {
+			this.resumeButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F8),
+					() -> this.resumeButton.fire());
+			this.suspendButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F9),
+					() -> this.suspendButton.fire());
+			this.terminateButton.getScene().getAccelerators().put(
+					new KeyCodeCombination(KeyCode.F2, KeyCombination.CONTROL_DOWN), () -> this.terminateButton.fire());
+			this.stepIButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F4),
+					() -> this.stepIButton.fire());
+			this.stepIntoButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F5),
+					() -> this.stepIntoButton.fire());
+			this.stepOverButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F6),
+					() -> this.stepOverButton.fire());
+			this.stepReturnButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F7),
+					() -> this.stepReturnButton.fire());
+		});
 	}
 
 	@FXML
@@ -349,6 +377,16 @@ public class RootLayoutController {
 		handleRunOrDebug("", "", "", true);
 	}
 
+	public void enableRunOrDebug() {
+		runButton.setDisable(false);
+		debugButton.setDisable(false);
+	}
+
+	public void disableRunOrDebug() {
+		runButton.setDisable(true);
+		debugButton.setDisable(true);
+	}
+
 	// TODO if the class of currently selected tab doesn't contain main method, then
 	// mainClass should come from last runConfiguration
 	private void handleRunOrDebug(String mainClass, String sourcepath, String classpath, boolean debugMode) {
@@ -370,7 +408,8 @@ public class RootLayoutController {
 				// parameters
 				String fileSourcepath = file.getCanonicalPath();
 				System.out.println("root fileSourcepath: " + fileSourcepath);
-				mainClass = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath), Paths.get(fileSourcepath));
+				mainClass = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath),
+						Paths.get(fileSourcepath));
 			}
 			System.out.println(
 					"root mainclass: " + mainClass + ", sourcepath: " + sourcepath + ", classpath: " + classpath);
@@ -385,7 +424,7 @@ public class RootLayoutController {
 			Main.setClasspath(classpath);
 			Main.setDebugMode(debugMode);
 			Main.getNewDebugger().set(true);
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -396,26 +435,26 @@ public class RootLayoutController {
 		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
 		currentDebugger.resume();
 	}
-	
+
 	@FXML
 	private void handleTerminate() {
 		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
 		currentDebugger.terminate();
 	}
-	
+
 	class StepCommand {
 		private EventRequestManager eventReqMgr;
 		private ThreadReference thread;
 		private int size;
 		private int depth;
-		
+
 		public StepCommand(Debugger debugger, ThreadReference thread, int size, int depth) {
 			this.eventReqMgr = debugger.getEventRequestManager();
 			this.thread = thread;
 			this.size = size;
 			this.depth = depth;
 		}
-		
+
 		public void execute() {
 			// delete step request of current thread
 			List<StepRequest> stepRequests = eventReqMgr.stepRequests();
@@ -431,27 +470,27 @@ public class RootLayoutController {
 			stepRequest.enable();
 		}
 	}
-	
+
 	@FXML
 	private void handleStepi() {
 		handleSomeStep(StepRequest.STEP_MIN, StepRequest.STEP_INTO);
 	}
-	
+
 	@FXML
 	private void handleStepInto() {
 		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_INTO);
 	}
-	
+
 	@FXML
 	private void handleStepOver() {
 		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_OVER);
 	}
-	
+
 	@FXML
 	private void handleStepReturn() {
 		handleSomeStep(StepRequest.STEP_LINE, StepRequest.STEP_OUT);
 	}
-	
+
 	private void handleSomeStep(int size, int depth) {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		Debugger currentDebugger = threadAreaController.getSelectedDebugger();
@@ -460,7 +499,7 @@ public class RootLayoutController {
 		stepi.execute();
 		currentDebugger.resume();
 	}
-	
+
 	public void setOverviewController(OverviewController overviewController) {
 		this.overviewController = overviewController;
 		this.codeAreaController = this.overviewController.getCodeAreaController();
