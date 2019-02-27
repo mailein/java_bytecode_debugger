@@ -27,8 +27,6 @@ public class OverviewController {
 
 	@FXML
 	private void initialize() {
-		this.codeAreaController = (CodeAreaController) initArea("view/CodeArea.fxml", this.codeArea, 0.0, 0.0, 0.0,
-				0.0);
 		this.threadAreaController = (ThreadAreaController) initArea("view/ThreadArea.fxml", this.threadArea, 0.0, 0.0,
 				0.0, 0.0);
 		this.watchpointAreaController = (WatchpointAreaController) initArea("view/WatchpointArea.fxml",
@@ -37,6 +35,8 @@ public class OverviewController {
 				this.breakpointArea, 0.0, 0.0, 0.0, 0.0);
 		this.localVarAreaController = (LocalVarAreaController) initArea("view/LocalVarArea.fxml", this.localVarArea,
 				0.0, 0.0, 0.0, 0.0);
+		this.codeAreaController = (CodeAreaController) initArea("view/CodeArea.fxml", this.codeArea, 0.0, 0.0, 0.0,
+				0.0);
 	}
 
 	private Object initArea(String resourcePath, AnchorPane parent, double top, double bottom, double left,

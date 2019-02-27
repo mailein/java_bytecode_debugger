@@ -1,4 +1,5 @@
 package debugger;
+import debugger.view.RootLayoutController;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -33,17 +34,20 @@ public class Main {
 			protected Void call() throws Exception {
 				Debugger debugger = new Debugger(mainClassArg, sourcepathArg, classpathArg, debugModeArg);// TODO add progArg to
 				Thread t = new Thread(debugger);
-				GUI.getThreadAreaController().removeAllTerminatedDebugger();
-				GUI.getThreadAreaController().addDebugger(debugger, t);
+				GUI.getThreadAreaController().removeTerminatedDebugger();
+				GUI.getThreadAreaController().addDebugger(debugger);
 				t.start();
-				GUI.getRootLayoutController().disableRunOrDebug();
+				RootLayoutController rootController = GUI.getRootLayoutController();
+				rootController.disableRunOrDebug();
+				rootController.enableOrDisableButtons(false);
 				try {
 					t.join();
-					GUI.getRootLayoutController().enableRunOrDebug();
+					rootController.enableRunOrDebug();
+					rootController.enableOrDisableButtons(true);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-				GUI.getThreadAreaController().applyTerminatedMarker(debugger, t);
+				GUI.getThreadAreaController().applyTerminatedMarker(debugger);
 				System.out.println("debugger thread died");
 
 				return null;

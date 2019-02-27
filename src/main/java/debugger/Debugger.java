@@ -16,7 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
+
+import org.fxmisc.richtext.CodeArea;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
@@ -63,11 +66,17 @@ import debugger.view.BreakpointAreaController;
 import debugger.view.WatchpointAreaController;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.concurrent.Task;
+import javafx.scene.Node;
+import javafx.scene.layout.HBox;
+import javafx.scene.shape.Polygon;
 
 public class Debugger implements Runnable {
 
@@ -84,13 +93,11 @@ public class Debugger implements Runnable {
 																								// refType>
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
-	private boolean resume = false;
-	
 	private String mainClassName;
 	private String sourcepath;
 	private String classpath;
 	private boolean debugMode;
-
+	
 	/**
 	 * @param mainClass  is complete name, eg. countdownZuZweit.Main
 	 * @param sourcepath
@@ -241,6 +248,10 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
+			
+			//for line indicator
+			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
+			
 			// resume controlled by GUI/ controller
 			synchronized (this) {
 				this.wait();
@@ -263,6 +274,10 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
+			
+			//for line indicator
+			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
+			
 			// resume controlled by GUI/ controller
 			synchronized (this) {
 				this.wait();
@@ -305,8 +320,6 @@ public class Debugger implements Runnable {
 			eventSet.resume();
 		}
 	}
-
-	
 
 //	private void requestWatchpoints() {
 //		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
@@ -508,4 +521,5 @@ public class Debugger implements Runnable {
 			e.printStackTrace();
 		}
 	}
+
 }

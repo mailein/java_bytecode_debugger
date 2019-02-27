@@ -1,18 +1,13 @@
 package debugger.view;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.sun.jdi.ThreadReference;
 
 import debugger.Debugger;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.fxml.FXML;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -25,12 +20,11 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	private AnchorPane anchorPane = new AnchorPane();
 	private TreeView<String> tree;
 
-	private ObservableMap<Thread, Debugger> debuggers = FXCollections.observableHashMap();
-	private Debugger selectedDebugger;
+	private Debugger debugger;
 	private ThreadReference selectedThread;
 //	private StackFrame selectedStack;
 
-	private Map<Thread, Debugger> terminatedDebuggers = new HashMap<>();
+	private boolean terminated = false;
 	private String terminatedMarker = "<terminated>";
 	private String debuggerNameMarker = "[Java Application]";
 	private String threadNameMarker = "Thread[";
@@ -48,13 +42,9 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
 			if (nv.getValue().contains(debuggerNameMarker)) {
-				this.selectedDebugger = String2Debugger(nv.getValue());
-				this.selectedThread = null;
-//				this.selectedStack = null;
+				tree.getSelectionModel().selectNext();
 			}
 			if (nv.getValue().contains(threadNameMarker)) {
-				String debuggerString = nv.getParent().getValue();
-				this.selectedDebugger = String2Debugger(debuggerString);
 				this.selectedThread = String2Thread(nv.getValue());
 //				try {
 //					this.selectedStack = this.selectedThread.frame(0);
@@ -73,49 +63,50 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		tree.setShowRoot(false);
 	}
 
-	public void addDebugger(Debugger debugger, Thread t) {
-		debuggers.put(t, debugger);
-		addDebuggerToTree(debugger, t);
+	public void addDebugger(Debugger debugger) {
+		this.debugger = debugger;
+		addDebuggerToTree(debugger);
 		System.out.println("added debugger to tree------------");
 		System.out.println(debugger.getThreads().size());
 	}
 
-	public void applyTerminatedMarker(Debugger debugger, Thread t) {
-		String s = generateDebuggerName(debugger, t);
+	public void applyTerminatedMarker(Debugger debugger) {
+		String s = generateDebuggerName(debugger);
 		TreeItem<String> dbgTreeItem = getTreeItem(s, tree.getRoot());
 		s = terminatedMarker + s;
 		dbgTreeItem.setValue(s);
 
-		terminatedDebuggers.put(t, debugger);// can not remove this debugger yet
+		terminated = true;// can not remove this debugger yet
 
 		// remove all treeItems under this debugger other than debuggerTreeItem
-		removeDebuggerChildrenFromTree(debugger, t);
+		removeDebuggerChildrenFromTree(debugger);
 	}
 
-	public void removeAllTerminatedDebugger() {
-		terminatedDebuggers.forEach((t, debugger) -> removeDebugger(debugger, t));
-		terminatedDebuggers.clear();
+	public void removeTerminatedDebugger() {
+		if(terminated)
+			removeDebugger(debugger);
 	}
 
-	public void removeDebugger(Debugger debugger, Thread t) {
-		debuggers.remove(t, debugger);
-		removeDebuggerFromTree(debugger, t);
+	public void removeDebugger(Debugger debugger) {
+		removeDebuggerFromTree(debugger);
+		this.debugger = null;
+		this.terminated = false;
 	}
 
 	// only added Debugger and its threadReferences to root, stackFrame is not added
 	// in this method
-	private void addDebuggerToTree(Debugger debugger, Thread t) {
+	private void addDebuggerToTree(Debugger debugger) {
 		//debugger
-		TreeItem<String> dbgTreeItem = addBranch(generateDebuggerName(debugger, t), tree.getRoot());
-		this.selectedDebugger = debugger;
+		TreeItem<String> dbgTreeItem = addBranch(generateDebuggerName(debugger), tree.getRoot());
 		//threads
 		ObservableList<ThreadReference> threads = debugger.getThreads();
 		threads.addListener((ListChangeListener.Change<? extends ThreadReference> c) -> {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(thread -> {
-						addBranch(generateThreadName(thread), dbgTreeItem);
+						TreeItem<String> threadTreeItem = addBranch(generateThreadName(thread), dbgTreeItem);
 						this.selectedThread = thread;
+						tree.getSelectionModel().select(threadTreeItem);
 					});
 				}
 				if (c.wasRemoved()) {
@@ -130,14 +121,14 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		});
 	}
 
-	private void removeDebuggerFromTree(Debugger debugger, Thread t) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)),
+	private void removeDebuggerFromTree(Debugger debugger) {
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)),
 				tree.getRoot());
 		tree.getRoot().getChildren().remove(dbgTreeItem);
 	}
 
-	private void removeDebuggerChildrenFromTree(Debugger debugger, Thread t) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger, t)),
+	private void removeDebuggerChildrenFromTree(Debugger debugger) {
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)),
 				tree.getRoot());
 		dbgTreeItem.getChildren().clear();
 	}
@@ -183,21 +174,10 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		return null;
 	}
 
-	private Debugger String2Debugger(String debuggerString) {
-		for (Entry<Thread, Debugger> entry : debuggers.entrySet()) {
-			Debugger dbg = entry.getValue();
-			Thread t = entry.getKey();
-			String s = generateDebuggerName(dbg, t);
-			if (debuggerString.equals(s) || debuggerString.equals(terminatedMarker + s))
-				return dbg;
-		}
-		return null;
-	}
-
 	private ThreadReference String2Thread(String threadString) {
-		if (this.selectedDebugger == null)
+		if (this.debugger == null)
 			return null;
-		for (ThreadReference thread : this.selectedDebugger.getThreads()) {
+		for (ThreadReference thread : this.debugger.getThreads()) {
 			if (threadString.equals(generateThreadName(thread)))
 				return thread;
 		}
@@ -218,8 +198,8 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 //		return null;
 //	}
 
-	private String generateDebuggerName(Debugger dbg, Thread t) {
-		return dbg.name() + t.getId() + debuggerNameMarker;
+	private String generateDebuggerName(Debugger dbg) {
+		return dbg.name() + debuggerNameMarker;
 	}
 
 	private String generateThreadName(ThreadReference thread) {
@@ -235,35 +215,10 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 //		return className + "." + methodSignature + stackNameMarker + lineNumber + " bci:" + bci;
 //	}
 
-	public Map<Thread, Debugger> getRunningDebuggers() {
-		Map<Thread, Debugger> runningDebuggers = new HashMap<>();
-//		debuggers.forEach((t, dbg) -> {
-//			System.out.println("all debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-//		});
-//		terminatedDebuggers.forEach((t, dbg) -> {
-//			System.out.println("terminated debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-//		});
-		debuggers.keySet().stream().filter(thread -> !terminatedDebuggers.keySet().contains(thread)).forEach(thread -> {
-			runningDebuggers.put(thread, debuggers.get(thread));
-		});
-//		runningDebuggers.forEach((t, dbg) -> {
-//			System.out.println("running debuggers: thread: " + t.getName() + ", debugger: " + dbg.name() + "classpath: " + dbg.classpath());
-//		});
-		return runningDebuggers;
-	}
-
-	public Debugger getSelectedDebugger() {
-		if (selectedDebugger != null && selectedThread == null) {
-			this.selectedThread = selectedDebugger.getMainThread();
-//			if (selectedThread != null) {
-//				try {
-//					this.selectedStack = this.selectedThread.frame(0);
-//				} catch (IncompatibleThreadStateException e) {
-//					e.printStackTrace();
-//				}
-//			}
-		}
-		return selectedDebugger;
+	public Debugger getRunningDebugger() {
+		if(!terminated)
+			return debugger;
+		return null;
 	}
 
 	public ThreadReference getSelectedThread() {

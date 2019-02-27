@@ -72,11 +72,11 @@ public class BreakpointAreaController {
 						});
 
 						// for the situation: add breakpoints AFTER debuggers launch
-						Map<Thread, Debugger> debuggers = GUI.getThreadAreaController().getRunningDebuggers();
-						debuggers.forEach((t, dbg) -> {
+						Debugger dbg = GUI.getThreadAreaController().getRunningDebugger();
+						if(dbg != null) {
 							String className = getClassName(linebp, dbg);
 							addLineBreakpointToDebugger(dbg, className, linebp);
-						});
+						}
 					});
 				}
 				if (c.wasRemoved()) {
@@ -205,6 +205,14 @@ public class BreakpointAreaController {
 		});
 	}
 
+	public boolean lineBreakpointInLine(String fileSourcepath, int lineNumber) {
+		LineBreakpoint lineBp = new LineBreakpoint(fileSourcepath, lineNumber);
+		if(breakpoints.contains(lineBp)) 
+			return true;
+		else 
+			return false;
+	}
+	
 	public ObservableList<LineBreakpoint> getBreakpoints() {
 		return breakpoints;
 	}

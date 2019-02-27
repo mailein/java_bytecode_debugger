@@ -5,7 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -19,8 +21,16 @@ import org.reactfx.EventStream;
 import org.reactfx.EventStreams;
 import org.reactfx.value.Val;
 
+import debugger.Debugger;
 import debugger.GUI;
 import debugger.dataType.LineBreakpoint;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
@@ -54,15 +64,13 @@ public class CodeAreaController {
 	private AnchorPane anchorPane = new AnchorPane();
 	@FXML
 	private TabPane tabPane = new TabPane();
-//	@FXML
-//	private Label classpathLabel = new Label("classpath");
-//	@FXML
-//	private TextField classpathTextField = new TextField();
-	
+
 	private int newCount = 1;
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
 	private Tab selectedTab = null;
-	
+	private CodeArea selectedCodeArea = null;
+	private IntegerProperty currLine = new SimpleIntegerProperty();
+
 	class BreakpointFactory implements IntFunction<Node> {
 		@Override
 		public Node apply(int lineNumber) {
@@ -74,7 +82,7 @@ public class CodeAreaController {
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
-				if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
 					boolean visible = circle.isVisible();
 					circle.setVisible(!visible);
 					String fileSourcepath = "";
@@ -83,76 +91,50 @@ public class CodeAreaController {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					if(visible) {//remove breakpoint
-						GUI.getBreakpointAreaController().getBreakpoints().remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-					}else {//add breakpoint
-						GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+					if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
+						GUI.getBreakpointAreaController().getBreakpoints()
+								.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+					} else {// add breakpoint
+						GUI.getBreakpointAreaController().getBreakpoints()
+								.add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
 					}
 				}
-//				activateClasspath();
 			});
 			return label;
 		}
-    }
-	
-	class LineIndicatorFactory implements IntFunction<Node> {//TODO
-    	private final ObservableValue<Integer> suspendAtLineNumber;
-    	
-    	public LineIndicatorFactory(ObservableValue<Integer> suspendAtLineNumber) {
-    		this.suspendAtLineNumber = suspendAtLineNumber;
-    	}
-    	
+	}
+
+	class LineIndicatorFactory implements IntFunction<Node> {// TODO
 		@Override
 		public Node apply(int lineNumber) {
 			Polygon triangle = new Polygon(0.0, 0.0, 10.0, 5.0, 0.0, 10.0);
 			triangle.setFill(Color.GREEN);
-			
-			ObservableValue<Boolean> visible = Val.map(suspendAtLineNumber, currLine -> currLine == lineNumber);
-			
-			EventStream<Boolean> isVisible = EventStreams.nonNullValuesOf(visible);
-			isVisible.subscribe(v -> triangle.setVisible(v));
-			
+			triangle.setVisible(false);
+
+//			ThreadAreaController threadAreaController = GUI.getThreadAreaController();
+//			if(threadAreaController != null) {
+//				System.out.println("in line indicator factory");
+//				Debugger debugger = threadAreaController.getRunningDebugger();
+//				if (debugger != null) {
+//					ObservableValue<Integer> suspendAtLineNumber = currLine.asObject();
+//					ObservableValue<Boolean> visible = Val.map(suspendAtLineNumber, currLine -> currLine == lineNumber);
+//					
+//					EventStream<Boolean> isVisible = EventStreams.nonNullValuesOf(visible);
+//					isVisible.subscribe(v -> triangle.setVisible(v));
+//				}
+//			}
+
 			return triangle;
 		}
-    }
-	
-//	private void activateClasspath() {
-//		if(!classpathTextField.isVisible()) {
-//			classpathTextField.setVisible(true);
-//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
-//		}
-//	}
-//	
-//	private void deactivateClasspath() {
-//		if(classpathTextField.isVisible()) {
-//			classpathTextField.setVisible(false);
-//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-//		}
-//	}
-//	
-//	private void toggleClasspath() {
-//		boolean isActive = classpathTextField.isVisible();
-//		classpathTextField.setVisible(!isActive);
-//		if(isActive) {
-//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-//		}else {
-//			classpathLabel.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
-//		}
-//	}
-	
+	}
+
 	@FXML
 	private void initialize() {// happens after constructor
-//		classpathLabel.setCursor(Cursor.HAND);
-//		classpathLabel.setOnMouseClicked(event -> toggleClasspath());
-//		classpathLabel.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-//		classpathTextField.setMinWidth(150.0);
-//		classpathTextField.prefColumnCountProperty().bind(classpathTextField.textProperty().length());
-//		classpathTextField.setVisible(true);
-//		classpathTextField.textProperty().bindBidirectional(GUI.getClasspath());		
-		
 		// update selectedTab
-		this.tabPane.getSelectionModel().selectedItemProperty()
-				.addListener((obs, ov, nv) -> this.selectedTab = this.tabPane.getSelectionModel().getSelectedItem());
+		this.tabPane.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
+			this.selectedTab = this.tabPane.getSelectionModel().getSelectedItem();
+			this.selectedCodeArea = (CodeArea) ((VirtualizedScrollPane<?>) this.selectedTab.getContent()).getContent();
+		});
 
 		// init with a new tab
 		File file = new File("");
@@ -161,6 +143,43 @@ public class CodeAreaController {
 			if (tabPane.getTabs().size() == 0) {
 				File f = new File("");
 				newTab(f);
+			}
+		});
+
+		// line indicator
+		currLine.addListener((obs, ov, nv) -> {
+			if (ov.intValue() != nv.intValue()) {
+				List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
+				graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
+				
+				graphicFactory.add(line -> {
+					HBox hbox = (HBox) graphicFactory.get(0).apply(line);
+					
+					// breakpoint for all lines
+					Label label = (Label) hbox.getChildren().get(0);
+					Circle circle = (Circle) label.getGraphic();
+					String fileSourcepath = "";
+					try {
+						fileSourcepath = tabsWithFile.get(this.selectedTab).getCanonicalPath();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					boolean containsLineBp = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, line + 1);
+					if(containsLineBp) {
+						circle.setVisible(true);
+					}else {
+						circle.setVisible(false);
+					}
+					
+					//indicator for ov, nv
+					Polygon triangle = (Polygon) hbox.getChildren().get(2);
+					if(line + 1 == ov.intValue())
+						triangle.setVisible(false);
+					if(line + 1 == nv.intValue())
+						triangle.setVisible(true);
+					return hbox;
+				});
+				selectedCodeArea.setParagraphGraphicFactory(graphicFactory.get(1));
 			}
 		});
 	}
@@ -190,28 +209,25 @@ public class CodeAreaController {
 		CodeArea codeArea = new CodeArea();
 		codeArea.replaceText(content);
 		IntFunction<Node> breakpointFactory = new BreakpointFactory();
-        IntFunction<Node> lineNumberFactory = LineNumberFactory.get(codeArea);
-//        IntFunction<Node> lineIndicatorFactory = new LineIndicatorFactory(codeArea.currentParagraphProperty());
-        IntFunction<Node> graphicFactory = line -> {
-        	Node bp = breakpointFactory.apply(line);
-        	Node lineNum = lineNumberFactory.apply(line);
-        	lineNum.setCursor(Cursor.HAND);
-        	lineNum.setOnMouseClicked(click -> {
-        		if(click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-        			Node circle = ((Label)bp).getGraphic();
-        			circle.setVisible(!circle.isVisible());
-        		}
-        	});
-        	HBox hBox = new HBox(
-        			bp
-        			,lineNum
-//        			,lineIndicatorFactory.apply(line)
-        			);
-        	hBox.setAlignment(Pos.CENTER_LEFT);
+		IntFunction<Node> lineNumberFactory = LineNumberFactory.get(codeArea);
+		IntFunction<Node> lineIndicatorFactory = new LineIndicatorFactory();
+		IntFunction<Node> graphicFactory = line -> {
+			Node bp = breakpointFactory.apply(line);
+			Node lineNum = lineNumberFactory.apply(line);
+			Node indicator = lineIndicatorFactory.apply(line);
+			lineNum.setCursor(Cursor.HAND);
+			lineNum.setOnMouseClicked(click -> {
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+					Node circle = ((Label) bp).getGraphic();
+					circle.setVisible(!circle.isVisible());
+				}
+			});
+			HBox hBox = new HBox(bp, lineNum, indicator);
+			hBox.setAlignment(Pos.CENTER_LEFT);
 			return hBox;
-        };
-        codeArea.setParagraphGraphicFactory(graphicFactory);
-		
+		};
+		codeArea.setParagraphGraphicFactory(graphicFactory);
+
 		Tab tab = new Tab(name, new VirtualizedScrollPane<>(codeArea));
 		codeArea.textProperty().addListener((observable, oldValue, newValue) -> {
 			if (!tab.getText().contains("*")) {
@@ -307,10 +323,14 @@ public class CodeAreaController {
 			return false;
 		}
 	}
-	
+
 	public File getFileOfSelectedTab() {
-		if(selectedTab == null)
+		if (selectedTab == null)
 			return null;
 		return tabsWithFile.get(selectedTab);
+	}
+
+	public void setCurrLine(int line) {
+		this.currLine.set(line);
 	}
 }

@@ -85,6 +85,7 @@ public class RootLayoutController {
 		this.saveMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
 		this.saveAsMenuItem.setAccelerator(
 				new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+		
 		this.newButton.setTooltip(new Tooltip("Ctrl+N"));
 		this.openButton.setTooltip(new Tooltip("Ctrl+O"));
 		this.saveButton.setTooltip(new Tooltip("Ctrl+S"));
@@ -95,6 +96,9 @@ public class RootLayoutController {
 		this.stepIntoButton.setTooltip(new Tooltip("F5"));
 		this.stepOverButton.setTooltip(new Tooltip("F6"));
 		this.stepReturnButton.setTooltip(new Tooltip("F7"));
+		
+		enableOrDisableButtons(true);
+		
 		Platform.runLater(() -> {
 			this.resumeButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F8),
 					() -> this.resumeButton.fire());
@@ -113,6 +117,16 @@ public class RootLayoutController {
 		});
 	}
 
+	public void enableOrDisableButtons(boolean toDisable) {
+		this.resumeButton.setDisable(toDisable);
+		this.suspendButton.setDisable(toDisable);
+		this.terminateButton.setDisable(toDisable);
+		this.stepIButton.setDisable(toDisable);
+		this.stepIntoButton.setDisable(toDisable);
+		this.stepOverButton.setDisable(toDisable);
+		this.stepReturnButton.setDisable(toDisable);
+	}
+	
 	@FXML
 	private void handleNew() {
 		File file = new File("");
@@ -432,13 +446,13 @@ public class RootLayoutController {
 
 	@FXML
 	private void handleResume() {
-		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
+		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.resume();
 	}
 
 	@FXML
 	private void handleTerminate() {
-		Debugger currentDebugger = GUI.getThreadAreaController().getSelectedDebugger();
+		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.terminate();
 	}
 
@@ -493,7 +507,7 @@ public class RootLayoutController {
 
 	private void handleSomeStep(int size, int depth) {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
-		Debugger currentDebugger = threadAreaController.getSelectedDebugger();
+		Debugger currentDebugger = threadAreaController.getRunningDebugger();
 		ThreadReference currentThread = threadAreaController.getSelectedThread();
 		StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 		stepi.execute();
