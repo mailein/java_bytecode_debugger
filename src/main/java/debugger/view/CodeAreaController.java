@@ -46,6 +46,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -82,28 +83,12 @@ public class CodeAreaController {
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-					boolean visible = circle.isVisible();
-					circle.setVisible(!visible);
-					String fileSourcepath = "";
-					try {
-						fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
-						GUI.getBreakpointAreaController().getBreakpoints()
-								.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-					} else {// add breakpoint
-						GUI.getBreakpointAreaController().getBreakpoints()
-								.add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-					}
-				}
+				toggleLineBreakpoint(lineNumber, circle, click);
 			});
 			return label;
 		}
 	}
-
+	
 	class LineIndicatorFactory implements IntFunction<Node> {// TODO
 		@Override
 		public Node apply(int lineNumber) {
@@ -128,6 +113,29 @@ public class CodeAreaController {
 		}
 	}
 
+	private void toggleLineBreakpoint(int lineNumber, Circle circle, MouseEvent click) {
+		System.out.println("mouse double clicked to set bp");
+		if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+			boolean visible = circle.isVisible();
+			circle.setVisible(!visible);
+			String fileSourcepath = "";
+			try {
+				fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
+				GUI.getBreakpointAreaController().getBreakpoints()
+				.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+				System.out.println("CodeArea - bp, line: " + (lineNumber + 1));
+			} else {// add breakpoint
+				GUI.getBreakpointAreaController().getBreakpoints()
+				.add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+				System.out.println("CodeArea + bp, line: " + (lineNumber + 1));
+			}
+		}
+	}
+	
 	@FXML
 	private void initialize() {// happens after constructor
 		// update selectedTab
@@ -166,6 +174,7 @@ public class CodeAreaController {
 					}
 					boolean containsLineBp = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, line + 1);
 					if(containsLineBp) {
+						System.out.println("bp for line: " + line);//TODO why print multiple times???
 						circle.setVisible(true);
 					}else {
 						circle.setVisible(false);
@@ -217,10 +226,11 @@ public class CodeAreaController {
 			Node indicator = lineIndicatorFactory.apply(line);
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-					Node circle = ((Label) bp).getGraphic();
-					circle.setVisible(!circle.isVisible());
-				}
+				toggleLineBreakpoint(line, (Circle)((Label) bp).getGraphic(), click);
+//				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+//					Node circle = ((Label) bp).getGraphic();
+//					circle.setVisible(!circle.isVisible());
+//				}
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);

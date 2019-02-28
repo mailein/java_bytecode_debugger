@@ -65,15 +65,14 @@ public class BreakpointAreaController {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
+						System.out.println("bpArea processing bp: line: " + linebp.getLineNumber());
 						// view
-						linebp.updatedOnceProperty().addListener((obs, ov, nv) -> {
-							if(nv)
-								addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
-						});
+						if (!linebp.updatedOnceProperty().get())
+							addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
 
 						// for the situation: add breakpoints AFTER debuggers launch
 						Debugger dbg = GUI.getThreadAreaController().getRunningDebugger();
-						if(dbg != null) {
+						if (dbg != null) {
 							String className = getClassName(linebp, dbg);
 							addLineBreakpointToDebugger(dbg, className, linebp);
 						}
@@ -191,6 +190,7 @@ public class BreakpointAreaController {
 		String text = generateBreakpointLabelText(sourceName, lineNumber);
 		Label label = new Label(text);
 		gridPane.add(label, 0, gridPane.getRowCount());
+		System.out.println("added bp of line " + lineNumber + " to view");
 	}
 
 	private void removeLineBreakpointFromView(String sourceName, int lineNumber) {
@@ -207,12 +207,12 @@ public class BreakpointAreaController {
 
 	public boolean lineBreakpointInLine(String fileSourcepath, int lineNumber) {
 		LineBreakpoint lineBp = new LineBreakpoint(fileSourcepath, lineNumber);
-		if(breakpoints.contains(lineBp)) 
+		if (breakpoints.contains(lineBp))
 			return true;
-		else 
+		else
 			return false;
 	}
-	
+
 	public ObservableList<LineBreakpoint> getBreakpoints() {
 		return breakpoints;
 	}

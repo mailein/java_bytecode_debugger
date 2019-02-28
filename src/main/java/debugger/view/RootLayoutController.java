@@ -67,8 +67,8 @@ public class RootLayoutController {
 	private Button debugButton;
 	@FXML
 	private Button resumeButton;
-	@FXML
-	private Button suspendButton;// TODO
+//	@FXML
+//	private Button suspendButton;// TODO
 	@FXML
 	private Button terminateButton;
 
@@ -90,7 +90,7 @@ public class RootLayoutController {
 		this.openButton.setTooltip(new Tooltip("Ctrl+O"));
 		this.saveButton.setTooltip(new Tooltip("Ctrl+S"));
 		this.resumeButton.setTooltip(new Tooltip("F8"));
-		this.suspendButton.setTooltip(new Tooltip("F9"));
+//		this.suspendButton.setTooltip(new Tooltip("F9"));
 		this.terminateButton.setTooltip(new Tooltip("Ctrl+F2"));
 		this.stepIButton.setTooltip(new Tooltip("F4"));
 		this.stepIntoButton.setTooltip(new Tooltip("F5"));
@@ -102,8 +102,8 @@ public class RootLayoutController {
 		Platform.runLater(() -> {
 			this.resumeButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F8),
 					() -> this.resumeButton.fire());
-			this.suspendButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F9),
-					() -> this.suspendButton.fire());
+//			this.suspendButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F9),
+//					() -> this.suspendButton.fire());
 			this.terminateButton.getScene().getAccelerators().put(
 					new KeyCodeCombination(KeyCode.F2, KeyCombination.CONTROL_DOWN), () -> this.terminateButton.fire());
 			this.stepIButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F4),
@@ -119,7 +119,7 @@ public class RootLayoutController {
 
 	public void enableOrDisableButtons(boolean toDisable) {
 		this.resumeButton.setDisable(toDisable);
-		this.suspendButton.setDisable(toDisable);
+//		this.suspendButton.setDisable(toDisable);
 		this.terminateButton.setDisable(toDisable);
 		this.stepIButton.setDisable(toDisable);
 		this.stepIntoButton.setDisable(toDisable);
@@ -443,13 +443,13 @@ public class RootLayoutController {
 			e.printStackTrace();
 		}
 	}
-
+	
 	@FXML
-	private void handleResume() {
+	private void handleResume() {//TODO why it doesn't work after suspend thread
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.resume();
 	}
-
+	
 	@FXML
 	private void handleTerminate() {
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();

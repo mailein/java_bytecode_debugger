@@ -93,6 +93,8 @@ public class Debugger implements Runnable {
 																								// refType>
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 
+	private Map<ThreadReference, Integer> threadsSuspendCount = new HashMap<>();
+	
 	private String mainClassName;
 	private String sourcepath;
 	private String classpath;
@@ -197,9 +199,9 @@ public class Debugger implements Runnable {
 					execute(event);
 
 //					//TODO localVar
-					List<ThreadReference> threads = mainThread.threadGroup().threads();
-					threads.forEach(thread -> {
-					});
+//					List<ThreadReference> threads = mainThread.threadGroup().threads();
+//					threads.forEach(thread -> {
+//					});
 				}
 			}
 		}
@@ -213,7 +215,7 @@ public class Debugger implements Runnable {
 		} else if (event instanceof ThreadStartEvent) {
 			ThreadReference thread = ((ThreadStartEvent) event).thread();
 			if (mainThread.threadGroup().equals(thread.threadGroup())) {
-				threads.add(thread);
+				Platform.runLater(() -> threads.add(thread));
 			}
 			eventSet.resume();
 		} else if (event instanceof ClassPrepareEvent) {
@@ -253,9 +255,15 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			
 			// resume controlled by GUI/ controller
-			synchronized (this) {
-				this.wait();
-			}
+//			synchronized (this) {
+//				this.wait();
+//			}
+//			System.out.println("resumed Breakpoint Event");
+//			List<ThreadReference> threads = mainThread.threadGroup().threads();
+//			threads.forEach(t -> {
+//				System.out.println(t.name() + ": " + t.suspendCount());
+//			});
+			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
 			StepEvent stepEvent = (StepEvent) event;
@@ -279,9 +287,10 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			
 			// resume controlled by GUI/ controller
-			synchronized (this) {
-				this.wait();
-			}
+//			synchronized (this) {
+//				this.wait();
+//			}
+			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof AccessWatchpointEvent) {
 			AccessWatchpointEvent accessWatchpointEvent = (AccessWatchpointEvent) event;
@@ -500,17 +509,35 @@ public class Debugger implements Runnable {
 		return names;
 	}
 
-	public void resume() {
-		synchronized (this) {
-			this.notify();
+	//TODO maintain threads' suspend count
+	private void maintainThreadsSuspendCount(ThreadReference thread, int oldSuspendCount) {
+		int currSuspendCount = thread.suspendCount();
+		while(currSuspendCount < oldSuspendCount) {
+			thread.suspend();
 		}
+		while(currSuspendCount > oldSuspendCount) {
+			thread.resume();
+		}
+	}
+	
+	public void resume() {
+		threads.forEach(t -> {
+			if(threadsSuspendCount.containsKey(t)) {
+				maintainThreadsSuspendCount(t, threadsSuspendCount.get(t));
+			}
+		});
+		vm.resume();
+//		synchronized (this) {
+//			this.notify();
+//		}
 	}
 
 	public void terminate() {
 		vmExit = true;
-		synchronized (this) {
-			this.notify();
-		}
+		vm.resume();
+//		synchronized (this) {
+//			this.notify();
+//		}
 	}
 
 	@Override
@@ -521,5 +548,8 @@ public class Debugger implements Runnable {
 			e.printStackTrace();
 		}
 	}
-
+	
+	public void setSuspendCount(ThreadReference thread, int suspendCount) {
+		threadsSuspendCount.put(thread, suspendCount);
+	}
 }

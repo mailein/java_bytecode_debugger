@@ -40,7 +40,6 @@
                   <Button fx:id="debugButton" mnemonicParsing="false" onAction="#handleDebug" text="Debug" />
                   <Separator orientation="VERTICAL" />
                   <Button fx:id="resumeButton" mnemonicParsing="false" onAction="#handleResume" text="Resume" />
-                  <Button fx:id="suspendButton" mnemonicParsing="false" text="Suspend" />
                   <Button fx:id="terminateButton" mnemonicParsing="false" onAction="#handleTerminate" text="Terminate" />
                   <Separator orientation="VERTICAL" />
                 <Button fx:id="stepIButton" mnemonicParsing="false" onAction="#handleStepi" text="Stepi" />

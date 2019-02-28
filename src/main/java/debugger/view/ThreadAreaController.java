@@ -1,5 +1,8 @@
 package debugger.view;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,6 +14,9 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 
 public class ThreadAreaController {// TODO handle resume and suspend threadReference
@@ -19,7 +25,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	@FXML
 	private AnchorPane anchorPane = new AnchorPane();
 	private TreeView<String> tree;
-
+	TreeItem<String> debuggerTreeItem;
 	private Debugger debugger;
 	private ThreadReference selectedThread;
 //	private StackFrame selectedStack;
@@ -38,6 +44,8 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		anchorPane.getChildren().add(tree);
 		tree.prefWidthProperty().bind(anchorPane.widthProperty());// fit tree's size to parent anchorpane
 		tree.prefHeightProperty().bind(anchorPane.heightProperty());
+
+		tree.setOnMouseClicked(e -> toggleThread(e));
 
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
@@ -83,7 +91,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	}
 
 	public void removeTerminatedDebugger() {
-		if(terminated)
+		if (terminated)
 			removeDebugger(debugger);
 	}
 
@@ -96,23 +104,26 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	// only added Debugger and its threadReferences to root, stackFrame is not added
 	// in this method
 	private void addDebuggerToTree(Debugger debugger) {
-		//debugger
-		TreeItem<String> dbgTreeItem = addBranch(generateDebuggerName(debugger), tree.getRoot());
-		//threads
+		// debugger
+		debuggerTreeItem = addBranch(generateDebuggerName(debugger), tree.getRoot());
+		// threads
 		ObservableList<ThreadReference> threads = debugger.getThreads();
 		threads.addListener((ListChangeListener.Change<? extends ThreadReference> c) -> {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(thread -> {
-						TreeItem<String> threadTreeItem = addBranch(generateThreadName(thread), dbgTreeItem);
-						this.selectedThread = thread;
-						tree.getSelectionModel().select(threadTreeItem);
+						if (!terminated) {
+							TreeItem<String> threadTreeItem = addBranch(generateThreadName(thread), debuggerTreeItem);
+							threadTreeItem.setGraphic(getPause());
+							this.selectedThread = thread;
+							tree.getSelectionModel().select(threadTreeItem);
+						}
 					});
 				}
 				if (c.wasRemoved()) {
 					c.getRemoved().forEach(thread -> {
-						removeBranch(generateThreadName(thread), dbgTreeItem);	
-						if(this.selectedThread.equals(thread)) {
+						removeBranch(generateThreadName(thread), debuggerTreeItem);
+						if (this.selectedThread.equals(thread)) {
 							this.selectedThread = null;
 						}
 					});
@@ -121,15 +132,32 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		});
 	}
 
+	private void toggleThread(MouseEvent e) {
+		if (e.getClickCount() == 2) {
+			ImageView node;
+			if (selectedThread.suspendCount() < 2) {// playing -> pause
+				handleThreadSuspend();
+				System.out.println(selectedThread.name() + "'s suspend count: " + selectedThread.suspendCount());
+				node = getPlay();
+			} else {// paused -> play
+				handleThreadResume();
+				System.out.println(selectedThread.name() + "'s suspend count: " + selectedThread.suspendCount());
+				node = getPause();
+			}
+			debugger.setSuspendCount(selectedThread, selectedThread.suspendCount());
+			
+			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
+			threadTreeItem.setGraphic(node);
+		}
+	}
+
 	private void removeDebuggerFromTree(Debugger debugger) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)),
-				tree.getRoot());
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)), tree.getRoot());
 		tree.getRoot().getChildren().remove(dbgTreeItem);
 	}
 
 	private void removeDebuggerChildrenFromTree(Debugger debugger) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)),
-				tree.getRoot());
+		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)), tree.getRoot());
 		dbgTreeItem.getChildren().clear();
 	}
 
@@ -175,7 +203,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	}
 
 	private ThreadReference String2Thread(String threadString) {
-		if (this.debugger == null)
+		if (this.debugger == null || terminated)
 			return null;
 		for (ThreadReference thread : this.debugger.getThreads()) {
 			if (threadString.equals(generateThreadName(thread)))
@@ -216,13 +244,44 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 //	}
 
 	public Debugger getRunningDebugger() {
-		if(!terminated)
+		if (!terminated)
 			return debugger;
 		return null;
 	}
 
 	public ThreadReference getSelectedThread() {
 		return selectedThread;
+	}
+
+	private void handleThreadResume() {
+		while (selectedThread.suspendCount() > 1) // 2, 3, ...
+			selectedThread.resume();
+	}
+
+	private void handleThreadSuspend() {
+		while (selectedThread.suspendCount() < 2) // 0, 1
+			selectedThread.suspend();
+	}
+
+	// https://www.iconfinder.com/icons/3855622/pause_play_icon
+	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
+	private ImageView getPause() {
+		try {
+			return new ImageView(
+					new Image(new FileInputStream(new File("src/main/resources/debugger/view/pause.png"))));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private ImageView getPlay() {
+		try {
+			return new ImageView(new Image(new FileInputStream(new File("src/main/resources/debugger/view/play.png"))));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 //	public StackFrame getSelectedStack() {
