@@ -92,8 +92,7 @@ public class Debugger implements Runnable {
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
-
-	private Map<ThreadReference, Integer> threadsSuspendCount = new HashMap<>();
+	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	
 	private String mainClassName;
 	private String sourcepath;
@@ -255,14 +254,6 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			
 			// resume controlled by GUI/ controller
-//			synchronized (this) {
-//				this.wait();
-//			}
-//			System.out.println("resumed Breakpoint Event");
-//			List<ThreadReference> threads = mainThread.threadGroup().threads();
-//			threads.forEach(t -> {
-//				System.out.println(t.name() + ": " + t.suspendCount());
-//			});
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
@@ -287,9 +278,6 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			
 			// resume controlled by GUI/ controller
-//			synchronized (this) {
-//				this.wait();
-//			}
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof AccessWatchpointEvent) {
@@ -509,35 +497,38 @@ public class Debugger implements Runnable {
 		return names;
 	}
 
-	//TODO maintain threads' suspend count
-	private void maintainThreadsSuspendCount(ThreadReference thread, int oldSuspendCount) {
-		int currSuspendCount = thread.suspendCount();
-		while(currSuspendCount < oldSuspendCount) {
+	/**
+	 * @param thread
+	 * @param idealSuspendCount: 2 is to suspend, 1 resume
+	 */
+	private void setSuspendCount(ThreadReference thread, int idealSuspendCount) {
+		int count = thread.suspendCount();
+		if(count == idealSuspendCount)
+			return;
+		while(thread.suspendCount() < idealSuspendCount)
 			thread.suspend();
-		}
-		while(currSuspendCount > oldSuspendCount) {
+		while(thread.suspendCount() > idealSuspendCount)
 			thread.resume();
-		}
 	}
 	
 	public void resume() {
-		threads.forEach(t -> {
-			if(threadsSuspendCount.containsKey(t)) {
-				maintainThreadsSuspendCount(t, threadsSuspendCount.get(t));
+		threads.forEach(thread -> {
+			if(suspendedThreads.contains(thread)) {
+				setSuspendCount(thread, 2);//suspend thread
+			}else {
+				setSuspendCount(thread, 1);//resume thread
 			}
 		});
 		vm.resume();
-//		synchronized (this) {
-//			this.notify();
-//		}
 	}
 
 	public void terminate() {
 		vmExit = true;
 		vm.resume();
-//		synchronized (this) {
-//			this.notify();
-//		}
+	}
+	
+	public List<ThreadReference> getSuspendedThreads() {
+		return suspendedThreads;
 	}
 
 	@Override
@@ -547,9 +538,5 @@ public class Debugger implements Runnable {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-	
-	public void setSuspendCount(ThreadReference thread, int suspendCount) {
-		threadsSuspendCount.put(thread, suspendCount);
 	}
 }

@@ -65,7 +65,6 @@ public class BreakpointAreaController {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
-						System.out.println("bpArea processing bp: line: " + linebp.getLineNumber());
 						// view
 						if (!linebp.updatedOnceProperty().get())
 							addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
@@ -90,7 +89,6 @@ public class BreakpointAreaController {
 						}
 						int l = linebp.getLineNumber();
 						breakpoints.remove(linebp);
-						System.out.println("remove LineBreakpoint from controller at line " + l);
 					});
 				}
 			}
@@ -152,7 +150,7 @@ public class BreakpointAreaController {
 			breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 			breakpointRequest.enable();
 			int lineNumber = linebp.getLineNumber();
-			System.out.println("added Breakpoint for " + refType + " at line: " + lineNumber);
+			System.out.println("added Breakpoint to debugger for " + refType + " at line: " + lineNumber);
 			// update linebp
 			String sourceName = "";
 			try {

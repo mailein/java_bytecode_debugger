@@ -135,16 +135,13 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	private void toggleThread(MouseEvent e) {
 		if (e.getClickCount() == 2) {
 			ImageView node;
-			if (selectedThread.suspendCount() < 2) {// playing -> pause
-				handleThreadSuspend();
-				System.out.println(selectedThread.name() + "'s suspend count: " + selectedThread.suspendCount());
+			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
+				debugger.getSuspendedThreads().add(selectedThread);
 				node = getPlay();
 			} else {// paused -> play
-				handleThreadResume();
-				System.out.println(selectedThread.name() + "'s suspend count: " + selectedThread.suspendCount());
+				debugger.getSuspendedThreads().remove(selectedThread);
 				node = getPause();
 			}
-			debugger.setSuspendCount(selectedThread, selectedThread.suspendCount());
 			
 			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
 			threadTreeItem.setGraphic(node);
@@ -251,16 +248,6 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 
 	public ThreadReference getSelectedThread() {
 		return selectedThread;
-	}
-
-	private void handleThreadResume() {
-		while (selectedThread.suspendCount() > 1) // 2, 3, ...
-			selectedThread.resume();
-	}
-
-	private void handleThreadSuspend() {
-		while (selectedThread.suspendCount() < 2) // 0, 1
-			selectedThread.suspend();
 	}
 
 	// https://www.iconfinder.com/icons/3855622/pause_play_icon

@@ -114,7 +114,6 @@ public class CodeAreaController {
 	}
 
 	private void toggleLineBreakpoint(int lineNumber, Circle circle, MouseEvent click) {
-		System.out.println("mouse double clicked to set bp");
 		if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
 			boolean visible = circle.isVisible();
 			circle.setVisible(!visible);
@@ -127,11 +126,9 @@ public class CodeAreaController {
 			if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
 				GUI.getBreakpointAreaController().getBreakpoints()
 				.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-				System.out.println("CodeArea - bp, line: " + (lineNumber + 1));
 			} else {// add breakpoint
 				GUI.getBreakpointAreaController().getBreakpoints()
 				.add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-				System.out.println("CodeArea + bp, line: " + (lineNumber + 1));
 			}
 		}
 	}
@@ -174,7 +171,7 @@ public class CodeAreaController {
 					}
 					boolean containsLineBp = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, line + 1);
 					if(containsLineBp) {
-						System.out.println("bp for line: " + line);//TODO why print multiple times???
+//						System.out.println("bp for line: " + line);//TODO why print multiple times???
 						circle.setVisible(true);
 					}else {
 						circle.setVisible(false);
