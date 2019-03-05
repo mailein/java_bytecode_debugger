@@ -16,6 +16,8 @@ import debugger.Debugger;
 import debugger.GUI;
 import debugger.view.ThreadAreaController;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 public class Watchpoint {//doesn't include local var
 
@@ -25,7 +27,7 @@ public class Watchpoint {//doesn't include local var
 	private SimpleStringProperty name;// global variable, if local get it from localVarAreaController
 	private SimpleStringProperty value;
 	
-	private List<HistoryRecord> history = new ArrayList<>();
+	private ObservableList<HistoryRecord> history = FXCollections.observableArrayList();
 	
 	public Watchpoint(String name) {
 		this.name = new SimpleStringProperty(name);
@@ -56,6 +58,14 @@ public class Watchpoint {//doesn't include local var
 		this.value.set(value);
 	}
 
+	public ObservableList<HistoryRecord> getHistory(){
+		return history;
+	}
+
+	public void addHistoryRecord(HistoryRecord record) {
+		history.add(record);
+	}
+	
 	public String strip2fieldName() {
 		String fieldName = getName();
 		if (fieldName.contains(".")) {
@@ -110,10 +120,6 @@ public class Watchpoint {//doesn't include local var
 				}
 			}
 		}
-	}
-	
-	public void addHistoryRecord(HistoryRecord record) {
-		history.add(record);
 	}
 	
 	@Override
