@@ -3,77 +3,93 @@ package debugger.view;
 import java.util.Iterator;
 
 import debugger.dataType.Watchpoint;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumn.CellDataFeatures;
+import javafx.scene.control.TableColumn.CellEditEvent;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.util.Callback;
 
 public class WatchpointAreaController {
 
 	private ObservableList<Watchpoint> watchpoints = FXCollections.observableArrayList();
-	
+
 	@FXML
-	private GridPane gridPane;
-	private int rowCount = 0;
-	
+	private VBox vbox = new VBox(5.0);
+	private Label tableLabel = new Label("Watchpoints");
+	private TableView<Watchpoint> table = new TableView<>();
+
 	@FXML
 	private void initialize() {
-	    watchpoints.addListener((ListChangeListener.Change<? extends Watchpoint> c) -> {
-			//tell all running debuggers to inject
-		});
-//		gridPane.setHgap(0);
-//		gridPane.setVgap(0);
-		addNewRow();
-	}
-	
-	//after debugger launch
-	private void addWatchpoint() {
-		
-	}
-	
-	private void removeWatchpoint() {
-		
-	}
-	
-	//whenever user inputs in last line 
-	private void addNewRow() {
-		TextField watchpointName = new TextField();
-		watchpointName.setPromptText("Add new watchpoint");
-		Label watchpointValue = new Label();
-		
-		gridPane.add(watchpointName, 0, rowCount);
-		gridPane.add(watchpointValue, 1, rowCount);
-		rowCount++;
-		watchpointName.textProperty().addListener((obs, ov, nv) -> {
-			if(ov.isEmpty() && !nv.isEmpty())
-				addNewRow();
-			if(!ov.isEmpty() && nv.isEmpty()) {
-				int rowIndex = GridPane.getRowIndex(watchpointName);
-				removeRow(rowIndex);
+		TableColumn<Watchpoint, String> nameCol = new TableColumn<Watchpoint, String>("Name");
+		nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+		nameCol.setMinWidth(100);
+		nameCol.setEditable(true);
+		nameCol.setCellFactory(TextFieldTableCell.<Watchpoint>forTableColumn());
+		nameCol.setOnEditCommit((CellEditEvent<Watchpoint, String> t) -> {
+			Watchpoint wp = watchpoints.get(t.getTablePosition().getRow());
+			String nv = t.getNewValue();
+			if (nv.equals("")) {//remove watchpoint
+				String ov = t.getOldValue();
+				watchpoints.remove(new Watchpoint(ov));
+			} else {
+//				if(watchpoints.contains(new Watchpoint(nv))) {//TODO
+//					
+//				}else {
+//					
+//				}
+				wp.setName(nv);
+				wp.eval();
 			}
 		});
+
+		TableColumn<Watchpoint, String> valueCol = new TableColumn<Watchpoint, String>("Value");
+		valueCol.setCellValueFactory(new PropertyValueFactory<>("value"));
+		valueCol.setMinWidth(100);
+		valueCol.setEditable(false);
+
+		table.setItems(watchpoints);
+		table.setEditable(true);
+		table.getColumns().addAll(nameCol, valueCol);
+
+		TextField addName = new TextField();
+		addName.setPromptText("name");
+		addName.setMaxWidth(nameCol.getPrefWidth());
+		Button addButton = new Button("Add");
+		addButton.setOnAction(e -> {
+			watchpoints.add(new Watchpoint(addName.getText()));
+			addName.clear();
+		});
+		HBox hbox = new HBox(3.0, addName, addButton);
+
+		tableLabel.setFont(new Font("Arial", 12));
+//		vbox.setPadding(new Insets(10, 0, 0, 10));
+		vbox.getChildren().addAll(tableLabel, table, hbox);
 	}
 	
-	//only called after deleting watchfieldName
-	private void removeRow(int rowIndex) {
-		Iterator<Node> iter = gridPane.getChildren().iterator(); 
-		while(iter.hasNext()) {
-			Node node = iter.next();
-			if(node instanceof TextField || node instanceof Label) { 
-				if(GridPane.getRowIndex(node) == rowIndex) 
-					iter.remove();
-			}
-		}
-		rowCount--;//assert the row is actually deleted
+	public void evalAll() {
+		watchpoints.forEach(wp -> wp.eval());
 	}
 
 	public ObservableList<Watchpoint> getWatchpoints() {
 		return watchpoints;
 	}
-	
+
 }

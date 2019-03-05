@@ -14,16 +14,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.IntFunction;
-import java.util.stream.Collectors;
-
-import org.fxmisc.richtext.CodeArea;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
-import com.sun.jdi.ClassNotLoadedException;
 import com.sun.jdi.Field;
 import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.LocalVariable;
@@ -52,10 +45,12 @@ import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
 import com.sun.jdi.event.VMStartEvent;
+import com.sun.jdi.request.AccessWatchpointRequest;
 import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
+import com.sun.jdi.request.ModificationWatchpointRequest;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
@@ -65,18 +60,9 @@ import debugger.misc.SourceClassConversion;
 import debugger.view.BreakpointAreaController;
 import debugger.view.WatchpointAreaController;
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
-import javafx.concurrent.Task;
-import javafx.scene.Node;
-import javafx.scene.layout.HBox;
-import javafx.scene.shape.Polygon;
 
 public class Debugger implements Runnable {
 
@@ -93,12 +79,15 @@ public class Debugger implements Runnable {
 																								// refType>
 	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 	private List<ThreadReference> suspendedThreads = new ArrayList<>();
-	
+	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// thread: actually no need, because global
+																		// variables
+																		// doesn't keep old value for different events
+
 	private String mainClassName;
 	private String sourcepath;
 	private String classpath;
 	private boolean debugMode;
-	
+
 	/**
 	 * @param mainClass  is complete name, eg. countdownZuZweit.Main
 	 * @param sourcepath
@@ -226,7 +215,11 @@ public class Debugger implements Runnable {
 			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 
+				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
+
+				// watchpoints
+				requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
 			}
 			eventSet.resume();
 		} else if (event instanceof ClassUnloadEvent) {
@@ -249,11 +242,13 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-			
-			//for line indicator
+
+			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-			
+
 			// resume controlled by GUI/ controller
+			this.currentEvent.put(thread, breakpointEvent);
+			GUI.getWatchpointAreaController().evalAll();
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
@@ -273,11 +268,13 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-			
-			//for line indicator
+
+			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-			
+
 			// resume controlled by GUI/ controller
+			this.currentEvent.put(thread, stepEvent);
+			GUI.getWatchpointAreaController().evalAll();
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof AccessWatchpointEvent) {
@@ -286,15 +283,15 @@ public class Debugger implements Runnable {
 			Field f = accessWatchpointEvent.field();
 			Value v = accessWatchpointEvent.valueCurrent();
 			Location location = accessWatchpointEvent.location();
+			ReferenceType refType = location.declaringType();
+			Method method= location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(thread, false, v, null, line, bci);
-			List<HistoryRecord> history = VarTable.get(f.name());
-			if (history == null) {
-				history = new ArrayList<>();
-			}
-			history.add(record);
-			VarTable.put(f.name(), history);
+			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
+			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
+			int index = watchpoints.indexOf(new Watchpoint(f.name()));
+			Watchpoint wp = watchpoints.get(index);
+			wp.addHistoryRecord(record);
 			eventSet.resume();
 		} else if (event instanceof ModificationWatchpointEvent) {
 			ModificationWatchpointEvent modificationWatchpointEvent = (ModificationWatchpointEvent) event;
@@ -303,41 +300,51 @@ public class Debugger implements Runnable {
 			Value currV = modificationWatchpointEvent.valueCurrent();
 			Value vToBe = modificationWatchpointEvent.valueToBe();
 			Location location = modificationWatchpointEvent.location();
+			ReferenceType refType = location.declaringType();
+			Method method= location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(thread, true, currV, vToBe, line, bci);
-			List<HistoryRecord> history = VarTable.get(f.name());
-			if (history == null) {
-				history = new ArrayList<>();
-			}
-			history.add(record);
-			VarTable.put(f.name(), history);
+			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, true, currV, vToBe, line, bci);
+			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
+			int index = watchpoints.indexOf(new Watchpoint(f.name()));
+			Watchpoint wp = watchpoints.get(index);
+			wp.addHistoryRecord(record);
 			eventSet.resume();
 		} else {
 			eventSet.resume();
 		}
 	}
 
-//	private void requestWatchpoints() {
-//		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
-//		ObservableList<Watchpoint> watchpoints = wpController.getWatchpoints();
-//
-//	}
-
-//	private void evalWatchpoints(Location loc) {
-//		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
-//		ObservableList<Watchpoint> watchpoints = wpController.getWatchpoints();
-//		
-//		//in bp/step Event: current loc
-//		
-//		ReferenceType refType = loc.declaringType();
-//		
-//		
-//		Field f = refType.fieldByName();//fieldByName only works for fieldName
-//		if(f != null) {
-//			//get all valid names of this field
-//		}
-//	}
+	private void requestWatchpoints(ReferenceType refType) {
+		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
+		ObservableList<Watchpoint> watchpoints = wpController.getWatchpoints();
+		watchpoints.forEach(wp -> {
+			String possibleClassName = wp.strip2className();
+			String fieldName = wp.strip2fieldName();
+			try {
+				if ((!possibleClassName.equals("") && refType.sourceName().equals(possibleClassName))
+						|| possibleClassName.equals("")) {
+					Field field = refType.fieldByName(fieldName);
+					if (field != null) {
+						AccessWatchpointRequest accessRequest;
+						if (vm.canWatchFieldAccess()) {
+							accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
+//							accessRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+							accessRequest.enable();
+						}
+						ModificationWatchpointRequest modificationRequest;
+						if (vm.canWatchFieldModification()) {
+							modificationRequest = eventRequestManager.createModificationWatchpointRequest(field);
+//							modificationRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+							modificationRequest.enable();
+						}
+					}
+				}
+			} catch (AbsentInformationException e) {
+				e.printStackTrace();
+			}
+		});
+	}
 
 	private void addSetLineBreakpointsToDebugger(ReferenceType classRefType, String className) {
 		// for the situation: add breakpoints BEFORE debuggers launch
@@ -472,13 +479,8 @@ public class Debugger implements Runnable {
 		return mainThread;
 	}
 
-	public List<ReferenceType> getLoadedAnonymousClasses(String startingWithClassName) {
-		List<ReferenceType> anonymousClasses = new ArrayList<>();
-		classes.forEach((className, refType) -> {
-			if (className.startsWith(startingWithClassName) && !className.contains("$"))
-				anonymousClasses.add(refType);
-		});
-		return anonymousClasses;
+	public Map<ThreadReference, Event> getCurrentEvent() {
+		return currentEvent;
 	}
 
 	public List<String> generateAllValidNames(Field field) {
@@ -497,26 +499,35 @@ public class Debugger implements Runnable {
 		return names;
 	}
 
+	public List<ReferenceType> getLoadedAnonymousClasses(String startingWithClassName) {
+		List<ReferenceType> anonymousClasses = new ArrayList<>();
+		classes.forEach((className, refType) -> {
+			if (className.startsWith(startingWithClassName) && !className.contains("$"))
+				anonymousClasses.add(refType);
+		});
+		return anonymousClasses;
+	}
+
 	/**
 	 * @param thread
-	 * @param idealSuspendCount: 2 is to suspend, 1 resume
+	 * @param        idealSuspendCount: 2 is to suspend, 1 resume
 	 */
 	private void setSuspendCount(ThreadReference thread, int idealSuspendCount) {
 		int count = thread.suspendCount();
-		if(count == idealSuspendCount)
+		if (count == idealSuspendCount)
 			return;
-		while(thread.suspendCount() < idealSuspendCount)
+		while (thread.suspendCount() < idealSuspendCount)
 			thread.suspend();
-		while(thread.suspendCount() > idealSuspendCount)
+		while (thread.suspendCount() > idealSuspendCount)
 			thread.resume();
 	}
-	
+
 	public void resume() {
 		threads.forEach(thread -> {
-			if(suspendedThreads.contains(thread)) {
-				setSuspendCount(thread, 2);//suspend thread
-			}else {
-				setSuspendCount(thread, 1);//resume thread
+			if (suspendedThreads.contains(thread)) {
+				setSuspendCount(thread, 2);// suspend thread
+			} else {
+				setSuspendCount(thread, 1);// resume thread
 			}
 		});
 		vm.resume();
@@ -526,7 +537,7 @@ public class Debugger implements Runnable {
 		vmExit = true;
 		vm.resume();
 	}
-	
+
 	public List<ThreadReference> getSuspendedThreads() {
 		return suspendedThreads;
 	}

@@ -5,6 +5,8 @@ import com.sun.jdi.Value;
 
 public class HistoryRecord {
 
+	private String refTypeName;
+	private String methodName;
 	private ThreadReference thread;
 	private boolean modifyOrAccess = false;		//modify: true, access: false
 	private Value currV;
@@ -12,7 +14,9 @@ public class HistoryRecord {
 	private int line;
 	private long bci;
 	
-	public HistoryRecord(ThreadReference thread, boolean modifyOrAccess, Value currV, Value vToBe, int line, long bci) {
+	public HistoryRecord(String refTypeName, String methodName, ThreadReference thread, boolean modifyOrAccess, Value currV, Value vToBe, int line, long bci) {
+		this.refTypeName = refTypeName;
+		this.methodName = methodName;
 		this.thread = thread;
 		this.modifyOrAccess = modifyOrAccess;
 		this.currV = currV;
@@ -22,7 +26,7 @@ public class HistoryRecord {
 	}
 	
 	public String toString() {
-		String ret = "line " + line + ",bci " + bci + ": "
+		String ret = "class " + refTypeName + ",method " + methodName + ",line " + line + ",bci " + bci + ": "
 				+ "thread[" + thread.name() + "]";
 		if(modifyOrAccess) {
 			ret += " writes " + vToBe.toString() + "(old value: " + currV.toString() + ")";

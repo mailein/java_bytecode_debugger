@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import com.sun.jdi.ThreadReference;
 
 import debugger.Debugger;
+import debugger.GUI;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -42,6 +43,8 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 		root.setExpanded(true);
 		tree = new TreeView<String>(root);
 		anchorPane.getChildren().add(tree);
+		
+		
 		tree.prefWidthProperty().bind(anchorPane.widthProperty());// fit tree's size to parent anchorpane
 		tree.prefHeightProperty().bind(anchorPane.heightProperty());
 
@@ -54,6 +57,7 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 			}
 			if (nv.getValue().contains(threadNameMarker)) {
 				this.selectedThread = String2Thread(nv.getValue());
+				GUI.getWatchpointAreaController().evalAll();
 //				try {
 //					this.selectedStack = this.selectedThread.frame(0);
 //				} catch (IncompatibleThreadStateException e) {
@@ -115,8 +119,9 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 						if (!terminated) {
 							TreeItem<String> threadTreeItem = addBranch(generateThreadName(thread), debuggerTreeItem);
 							threadTreeItem.setGraphic(getPause());
-							this.selectedThread = thread;
 							tree.getSelectionModel().select(threadTreeItem);
+							this.selectedThread = thread;
+							GUI.getWatchpointAreaController().evalAll();
 						}
 					});
 				}
@@ -124,7 +129,10 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 					c.getRemoved().forEach(thread -> {
 						removeBranch(generateThreadName(thread), debuggerTreeItem);
 						if (this.selectedThread.equals(thread)) {
-							this.selectedThread = null;
+							tree.getSelectionModel().selectPrevious();
+							String s = tree.getSelectionModel().getSelectedItem().getValue();
+							this.selectedThread = String2Thread(s);
+							GUI.getWatchpointAreaController().evalAll();
 						}
 					});
 				}
@@ -159,9 +167,9 @@ public class ThreadAreaController {// TODO handle resume and suspend threadRefer
 	}
 
 	// add threads to Debugger; add stackFrames to thread
-	private TreeItem<String> addBranch(String son, TreeItem<String> parent) {
+	private TreeItem<String> addBranch(String self, TreeItem<String> parent) {
 		TreeItem<String> item = new TreeItem<>();
-		item.setValue(son);
+		item.setValue(self);
 		item.setExpanded(true);
 		parent.getChildren().add(item);
 		return item;
