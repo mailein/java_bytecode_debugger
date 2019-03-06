@@ -27,7 +27,6 @@ public class WatchpointAreaController {
 	private ObservableList<Watchpoint> watchpoints = FXCollections.observableArrayList();
 
 	@FXML
-	private ScrollPane scrollPane = new ScrollPane();
 	private VBox vbox = new VBox(5.0);
 	private Label tableLabel = new Label("Watchpoints");
 	private TableView<Watchpoint> table = new TableView<>();
@@ -97,8 +96,10 @@ public class WatchpointAreaController {
 		addName.setMaxWidth(nameCol.getPrefWidth());
 		Button addButton = new Button("Add");
 		addButton.setOnAction(e -> {
-			watchpoints.add(new Watchpoint(addName.getText()));
+			Watchpoint wp = new Watchpoint(addName.getText());
+			watchpoints.add(wp);
 			addName.clear();
+			wp.eval();
 		});
 		HBox hbox = new HBox(3.0, tableLabel, addName, addButton);
 		hbox.setAlignment(Pos.CENTER_LEFT);
@@ -106,7 +107,6 @@ public class WatchpointAreaController {
 //		tableLabel.setFont(new Font("Arial", 12));
 //		vbox.setPadding(new Insets(10, 0, 0, 10));
 		vbox.getChildren().addAll(hbox, table);
-		scrollPane.setContent(vbox);
 	}
 
 	public void evalAll() {
@@ -118,16 +118,22 @@ public class WatchpointAreaController {
 		
 		TableColumn<HistoryRecord, String> nameCol = new TableColumn<>("Name");
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("nameProperty"));
+		nameCol.setSortable(false);
 		TableColumn<HistoryRecord, String> locationCol = new TableColumn<>("Location");
 		locationCol.setCellValueFactory(new PropertyValueFactory<>("locationProperty"));
+		locationCol.setSortable(false);
 		TableColumn<HistoryRecord, String> threadCol = new TableColumn<>("Thread");
 		threadCol.setCellValueFactory(new PropertyValueFactory<>("threadProperty"));
+		threadCol.setSortable(false);
 		TableColumn<HistoryRecord, String> readWriteCol = new TableColumn<>("R/W");
 		readWriteCol.setCellValueFactory(new PropertyValueFactory<>("ReadWriteProperty"));
+		readWriteCol.setSortable(false);
 		TableColumn<HistoryRecord, String> valueOldCol = new TableColumn<>("Value(Old)");
 		valueOldCol.setCellValueFactory(new PropertyValueFactory<>("valueOldProperty"));
+		valueOldCol.setSortable(false);
 		TableColumn<HistoryRecord, String> valueNewCol = new TableColumn<>("Value(New)");
 		valueNewCol.setCellValueFactory(new PropertyValueFactory<>("valueNewProperty"));
+		valueNewCol.setSortable(false);
 		
 		TableView<HistoryRecord> historyTable = new TableView<>();
 		historyTable.setItems(wp.getHistory());

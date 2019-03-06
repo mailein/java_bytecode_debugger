@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,7 @@ public class CodeAreaController {
 	private TabPane tabPane = new TabPane();
 
 	private int newCount = 1;
-	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
+	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();//TODO same file can only be opened in one tab
 	private Tab selectedTab = null;
 	private CodeArea selectedCodeArea = null;
 	private IntegerProperty currLine = new SimpleIntegerProperty();
@@ -337,6 +338,34 @@ public class CodeAreaController {
 		return tabsWithFile.get(selectedTab);
 	}
 
+	public Collection<File> getOpenedFiles(){
+		return tabsWithFile.values();
+	}
+	
+	/**
+	 * @param file must exist and on debugger's sourcepath
+	 */
+	public void gotoTabOfFile(File file) {//TODO lineIndicator
+		boolean[] isOpened = {false};
+		tabsWithFile.forEach((t, f) -> {
+			if(f.equals(file)) {
+				tabPane.getSelectionModel().select(t);
+				isOpened[0] = true;
+			}
+		});
+		if(!isOpened[0]) {
+			newTab(file);
+		}
+	}
+	
+	public void gotoTabOfError(File file) {
+		String name = file.getName();
+		String content = "can't open this file";
+		Tab tab = new Tab(name, new Label(content));
+		tabPane.getTabs().add(tab);
+		tabPane.getSelectionModel().select(tab);
+	}
+	
 	public void setCurrLine(int line) {
 		this.currLine.set(line);
 	}

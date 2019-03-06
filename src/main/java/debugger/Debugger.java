@@ -245,10 +245,11 @@ public class Debugger implements Runnable {
 
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-
-			// resume controlled by GUI/ controller
+			// watchpoint, localVar
 			this.currentEvent.put(thread, breakpointEvent);
 			GUI.getWatchpointAreaController().evalAll();
+			GUI.getLocalVarAreaController().refresh();
+			// resume controlled by GUI/ controller
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof StepEvent) {// switch thread, breakpointReq, stepiReq
@@ -271,10 +272,11 @@ public class Debugger implements Runnable {
 
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-
-			// resume controlled by GUI/ controller
+			// watchpoint, localVar
 			this.currentEvent.put(thread, stepEvent);
 			GUI.getWatchpointAreaController().evalAll();
+			GUI.getLocalVarAreaController().refresh();
+			// resume controlled by GUI/ controller
 			vm.suspend();
 			eventSet.resume();
 		} else if (event instanceof AccessWatchpointEvent) {
@@ -284,7 +286,7 @@ public class Debugger implements Runnable {
 			Value v = accessWatchpointEvent.valueCurrent();
 			Location location = accessWatchpointEvent.location();
 			ReferenceType refType = location.declaringType();
-			Method method= location.method();
+			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
 			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
@@ -301,10 +303,11 @@ public class Debugger implements Runnable {
 			Value vToBe = modificationWatchpointEvent.valueToBe();
 			Location location = modificationWatchpointEvent.location();
 			ReferenceType refType = location.declaringType();
-			Method method= location.method();
+			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, true, currV, vToBe, line, bci);
+			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, true, currV, vToBe, line,
+					bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
 			int index = watchpoints.indexOf(new Watchpoint(f.name()));
 			Watchpoint wp = watchpoints.get(index);
@@ -319,29 +322,25 @@ public class Debugger implements Runnable {
 		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
 		ObservableList<Watchpoint> watchpoints = wpController.getWatchpoints();
 		watchpoints.forEach(wp -> {
-			String possibleClassName = wp.strip2className();
+			String withoutFieldName = wp.stripOffFieldName();
 			String fieldName = wp.strip2fieldName();
-			try {
-				if ((!possibleClassName.equals("") && refType.sourceName().equals(possibleClassName))
-						|| possibleClassName.equals("")) {
-					Field field = refType.fieldByName(fieldName);
-					if (field != null) {
-						AccessWatchpointRequest accessRequest;
-						if (vm.canWatchFieldAccess()) {
-							accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
+			if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
+					|| withoutFieldName.equals("")) {
+				Field field = refType.fieldByName(fieldName);
+				if (field != null) {
+					AccessWatchpointRequest accessRequest;
+					if (vm.canWatchFieldAccess()) {
+						accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
 //							accessRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-							accessRequest.enable();
-						}
-						ModificationWatchpointRequest modificationRequest;
-						if (vm.canWatchFieldModification()) {
-							modificationRequest = eventRequestManager.createModificationWatchpointRequest(field);
+						accessRequest.enable();
+					}
+					ModificationWatchpointRequest modificationRequest;
+					if (vm.canWatchFieldModification()) {
+						modificationRequest = eventRequestManager.createModificationWatchpointRequest(field);
 //							modificationRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-							modificationRequest.enable();
-						}
+						modificationRequest.enable();
 					}
 				}
-			} catch (AbsentInformationException e) {
-				e.printStackTrace();
 			}
 		});
 	}
