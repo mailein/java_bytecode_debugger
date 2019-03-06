@@ -27,10 +27,6 @@ public abstract class Breakpoint {
 		this.fileSourcepath = fileSourcepath;
 		this.lineNumber = lineNumber;
 	}
-
-	public abstract boolean isLineBreakpoint();
-	public abstract boolean isWatchpoint();
-	
 	
 	public String getFileSourcepath() {
 		return fileSourcepath;

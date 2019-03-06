@@ -5,7 +5,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.sun.jdi.AbsentInformationException;
@@ -23,52 +22,59 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
 public class BreakpointAreaController {
 	@FXML
-	private AnchorPane anchorPane;
-	@FXML
-	private GridPane gridPane;
-	@FXML
-	private Button removeButton;
-	@FXML
-	private Button removeAllButton;
+	private VBox vbox = new VBox(5.0);
+	private Label tableLabel = new Label("Breakpoints");
+	private TableView<LineBreakpoint> table = new TableView<>();
+	private Button removeButton = new Button("Remove");
+	private Button removeAllButton = new Button("Remove All");;
 
-	private Node selectedNode;
 	private ObservableList<LineBreakpoint> breakpoints = FXCollections.observableArrayList();// +- by codeAreaController
 //	private List<LineBreakpoint> waiting = new ArrayList<>();// wrong! because there can be many debuggers
 
 	@FXML
 	private void initialize() {
-		gridPane.setOnMouseClicked(e -> {
-			this.selectedNode = (Node) e.getSource();
-		});
+		TableColumn<LineBreakpoint, String> classNameCol = new TableColumn<>("Class Name");
+		classNameCol.setCellValueFactory(new PropertyValueFactory<>("fileNameString"));
+		classNameCol.setMinWidth(50);
+
+		TableColumn<LineBreakpoint, String> lineNumberCol = new TableColumn<>("Line");
+		lineNumberCol.setCellValueFactory(new PropertyValueFactory<>("lineNumberString"));
+		lineNumberCol.setMinWidth(20);
+
+		table.setItems(breakpoints);
+		table.getColumns().addAll(classNameCol, lineNumberCol);
+
+		HBox hbox = new HBox(5.0, tableLabel, removeButton, removeAllButton);
+		hbox.setAlignment(Pos.CENTER_LEFT);
+
+		vbox.getChildren().addAll(hbox, table);
+
+		//TODO after remove breakpoint, the blue dot doesn't disappear
 		removeButton.setOnAction(e -> {
-			if (!gridPane.getChildren().isEmpty()) {
-				gridPane.getChildren().remove(selectedNode);
-			}
+			breakpoints.remove(table.getSelectionModel().getSelectedItem());
 		});
 		removeAllButton.setOnAction(e -> {
-			if (!gridPane.getChildren().isEmpty()) {
-				gridPane.getChildren().clear();
-			}
+			breakpoints.clear();
 		});
 		// add new breakpoints to loaded normal/anonymous class, if not loaded, leave
 		// it.
-
 		breakpoints.addListener((ListChangeListener.Change<? extends LineBreakpoint> c) -> {
 			while (c.next()) {
 				if (c.wasAdded()) {
 					c.getAddedSubList().forEach(linebp -> {
-						// view
-						if (!linebp.updatedOnceProperty().get())
-							addLineBreakpointToView(linebp.getFileSourcepath(), linebp.getLineNumber());
-
 						// for the situation: add breakpoints AFTER debuggers launch
 						Debugger dbg = GUI.getThreadAreaController().getRunningDebugger();
 						if (dbg != null) {
@@ -79,16 +85,11 @@ public class BreakpointAreaController {
 				}
 				if (c.wasRemoved()) {
 					c.getRemoved().forEach(linebp -> {
-						// view
-						removeLineBreakpointFromView(linebp.getFileSourcepath(), linebp.getLineNumber());
-
 						if (linebp.updatedOnceProperty().get()) {// has been requested
 							linebp.getEventReqMgrs()
 									.forEach(eventReqMgr -> removeLineBreakpointFromDebugger(eventReqMgr,
 											linebp.getLoc(), linebp));
 						}
-						int l = linebp.getLineNumber();
-						breakpoints.remove(linebp);
 					});
 				}
 			}
@@ -175,32 +176,6 @@ public class BreakpointAreaController {
 
 	private void disableLineBreakpoint() {
 		// TODO
-	}
-
-	private String generateBreakpointLabelText(String fileSourcepath, int lineNumber) {
-		String fileName = Paths.get(fileSourcepath).getFileName().toString();
-		String sourceName = fileName.substring(0, fileName.indexOf(".java"));
-		String text = sourceName + " [line: " + lineNumber + "]";
-		return text;
-	}
-
-	private void addLineBreakpointToView(String sourceName, int lineNumber) {
-		String text = generateBreakpointLabelText(sourceName, lineNumber);
-		Label label = new Label(text);
-		gridPane.add(label, 0, gridPane.getRowCount());
-		System.out.println("added bp of line " + lineNumber + " to view");
-	}
-
-	private void removeLineBreakpointFromView(String sourceName, int lineNumber) {
-		String text = generateBreakpointLabelText(sourceName, lineNumber);
-		gridPane.getChildren().removeIf(node -> {
-			if (node instanceof Label) {
-				Label l = (Label) node;
-				if (l.getText().equals(text))
-					return true;
-			}
-			return false;
-		});
 	}
 
 	public boolean lineBreakpointInLine(String fileSourcepath, int lineNumber) {
