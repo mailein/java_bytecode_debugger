@@ -12,17 +12,14 @@ import com.sun.jdi.Value;
 
 import debugger.GUI;
 import debugger.dataType.LocalVar;
-import debugger.dataType.Watchpoint;
 import debugger.misc.SuspensionLocation;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.VBox;
 
 public class LocalVarAreaController {
@@ -54,23 +51,21 @@ public class LocalVarAreaController {
 		localVars.clear();
 		ThreadReference thread = GUI.getThreadAreaController().getSelectedThread();
 		try {
-			List<StackFrame> frames = thread.frames();
-			frames.forEach(frame -> {
-				Location currFrameLocation = frame.location();
-				boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
-				if (suspendAtSelectedTab) {
-					List<LocalVariable> locals = null;
-					try {
-						locals = frame.visibleVariables();
-					} catch (AbsentInformationException e) {
-						e.printStackTrace();
-					}
-					locals.forEach(local -> {
-						Value value = frame.getValue(local);
-						localVars.add(new LocalVar(local.name(), value.toString()));
-					});
+			StackFrame currFrame = thread.frame(0);
+			Location currFrameLocation = currFrame.location();
+			boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
+			if (suspendAtSelectedTab) {
+				List<LocalVariable> locals = null;
+				try {
+					locals = currFrame.visibleVariables();
+				} catch (AbsentInformationException e) {
+					e.printStackTrace();
 				}
-			});
+				locals.forEach(local -> {
+					Value value = currFrame.getValue(local);
+					localVars.add(new LocalVar(local.name(), value.toString()));
+				});
+			}
 		} catch (IncompatibleThreadStateException e) {
 			e.printStackTrace();
 		}
