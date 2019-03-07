@@ -18,25 +18,29 @@ public class OverviewController {
 	private AnchorPane breakpointArea;
 	@FXML
 	private AnchorPane localVarArea;
+	@FXML
+	private AnchorPane bytecodeArea;
 
 	private CodeAreaController codeAreaController;
 	private ThreadAreaController threadAreaController;
 	private WatchpointAreaController watchpointAreaController;
 	private BreakpointAreaController breakpointAreaController;
 	private LocalVarAreaController localVarAreaController;
+	private BytecodeAreaController bytecodeAreaController;
 
 	@FXML
 	private void initialize() {
-		this.threadAreaController = (ThreadAreaController) initArea("view/ThreadArea.fxml", this.threadArea, 0.0, 0.0,
-				0.0, 0.0);
+		this.threadAreaController = (ThreadAreaController) initArea("view/ThreadArea.fxml", this.threadArea, 0, 0, 0,
+				0);
 		this.watchpointAreaController = (WatchpointAreaController) initArea("view/WatchpointArea.fxml",
-				this.watchpointArea, 0.0, 0.0, 0.0, 0.0);
+				this.watchpointArea, 0, 0, 0, 0);
 		this.breakpointAreaController = (BreakpointAreaController) initArea("view/BreakpointArea.fxml",
-				this.breakpointArea, 0.0, 0.0, 0.0, 0.0);
-		this.localVarAreaController = (LocalVarAreaController) initArea("view/LocalVarArea.fxml", this.localVarArea,
-				0.0, 0.0, 0.0, 0.0);
-		this.codeAreaController = (CodeAreaController) initArea("view/CodeArea.fxml", this.codeArea, 0.0, 0.0, 0.0,
-				0.0);
+				this.breakpointArea, 0, 0, 0, 0);
+		this.localVarAreaController = (LocalVarAreaController) initArea("view/LocalVarArea.fxml", this.localVarArea, 0,
+				0, 0, 0);
+		this.codeAreaController = (CodeAreaController) initArea("view/CodeArea.fxml", this.codeArea, 0, 0, 0, 0);
+		this.bytecodeAreaController = (BytecodeAreaController) initArea("view/BytecodeArea.fxml", this.bytecodeArea, 0,
+				0, 0, 0);
 	}
 
 	private Object initArea(String resourcePath, AnchorPane parent, double top, double bottom, double left,
@@ -84,4 +88,7 @@ public class OverviewController {
 		return localVarAreaController;
 	}
 
+	public BytecodeAreaController getBytecodeAreaController() {
+		return bytecodeAreaController;
+	}
 }
