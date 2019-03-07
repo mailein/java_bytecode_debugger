@@ -65,9 +65,13 @@ public class BreakpointAreaController {
 		//TODO after remove breakpoint, the blue dot doesn't disappear
 		removeButton.setOnAction(e -> {
 			breakpoints.remove(table.getSelectionModel().getSelectedItem());
+			CodeAreaController codeAreaController = GUI.getCodeAreaController();
+			codeAreaController.refreshParagraphGraphicFactory(-1, codeAreaController.getCurrLine());
 		});
 		removeAllButton.setOnAction(e -> {
 			breakpoints.clear();
+			CodeAreaController codeAreaController = GUI.getCodeAreaController();
+			codeAreaController.refreshParagraphGraphicFactory(-1, codeAreaController.getCurrLine());
 		});
 		// add new breakpoints to loaded normal/anonymous class, if not loaded, leave
 		// it.

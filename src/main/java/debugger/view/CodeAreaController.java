@@ -68,7 +68,7 @@ public class CodeAreaController {
 	private TabPane tabPane = new TabPane();
 
 	private int newCount = 1;
-	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();//TODO same file can only be opened in one tab
+	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();// TODO same file can only be opened in one tab
 	private Tab selectedTab = null;
 	private CodeArea selectedCodeArea = null;
 	private IntegerProperty currLine = new SimpleIntegerProperty();
@@ -84,12 +84,13 @@ public class CodeAreaController {
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
-				toggleLineBreakpoint(lineNumber, circle, click);
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
+					toggleLineBreakpoint(lineNumber, circle);
 			});
 			return label;
 		}
 	}
-	
+
 	class LineIndicatorFactory implements IntFunction<Node> {// TODO
 		@Override
 		public Node apply(int lineNumber) {
@@ -114,26 +115,23 @@ public class CodeAreaController {
 		}
 	}
 
-	private void toggleLineBreakpoint(int lineNumber, Circle circle, MouseEvent click) {
-		if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-			boolean visible = circle.isVisible();
-			circle.setVisible(!visible);
-			String fileSourcepath = "";
-			try {
-				fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
-				GUI.getBreakpointAreaController().getBreakpoints()
-				.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-			} else {// add breakpoint
-				GUI.getBreakpointAreaController().getBreakpoints()
-				.add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-			}
+	private void toggleLineBreakpoint(int lineNumber, Circle circle) {
+		boolean visible = circle.isVisible();
+		circle.setVisible(!visible);
+		String fileSourcepath = "";
+		try {
+			fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
+			GUI.getBreakpointAreaController().getBreakpoints()
+					.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+		} else {// add breakpoint
+			GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
 		}
 	}
-	
+
 	@FXML
 	private void initialize() {// happens after constructor
 		// update selectedTab
@@ -155,40 +153,45 @@ public class CodeAreaController {
 		// line indicator
 		currLine.addListener((obs, ov, nv) -> {
 			if (ov.intValue() != nv.intValue()) {
-				List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
-				graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
-				
-				graphicFactory.add(line -> {
-					HBox hbox = (HBox) graphicFactory.get(0).apply(line);
-					
-					// breakpoint for all lines
-					Label label = (Label) hbox.getChildren().get(0);
-					Circle circle = (Circle) label.getGraphic();
-					String fileSourcepath = "";
-					try {
-						fileSourcepath = tabsWithFile.get(this.selectedTab).getCanonicalPath();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					boolean containsLineBp = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, line + 1);
-					if(containsLineBp) {
-//						System.out.println("bp for line: " + line);//TODO why print multiple times???
-						circle.setVisible(true);
-					}else {
-						circle.setVisible(false);
-					}
-					
-					//indicator for ov, nv
-					Polygon triangle = (Polygon) hbox.getChildren().get(2);
-					if(line + 1 == ov.intValue())
-						triangle.setVisible(false);
-					if(line + 1 == nv.intValue())
-						triangle.setVisible(true);
-					return hbox;
-				});
-				selectedCodeArea.setParagraphGraphicFactory(graphicFactory.get(1));
+				refreshParagraphGraphicFactory(ov.intValue(), nv.intValue());
 			}
 		});
+	}
+
+	public void refreshParagraphGraphicFactory(int currLineOv, int currLineNv) {
+		List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
+		graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
+
+		graphicFactory.add(line -> {
+			HBox hbox = (HBox) graphicFactory.get(0).apply(line);
+
+			// breakpoint for all lines
+			Label label = (Label) hbox.getChildren().get(0);
+			Circle circle = (Circle) label.getGraphic();
+			String fileSourcepath = "";
+			try {
+				fileSourcepath = tabsWithFile.get(this.selectedTab).getCanonicalPath();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			boolean containsLineBp = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath,
+					line + 1);
+			if (containsLineBp) {
+//						System.out.println("bp for line: " + line);//TODO why print multiple times???
+				circle.setVisible(true);
+			} else {
+				circle.setVisible(false);
+			}
+
+			// indicator for ov, nv
+			Polygon triangle = (Polygon) hbox.getChildren().get(2);
+			if (line + 1 == currLineOv)
+				triangle.setVisible(false);
+			if (line + 1 == currLineNv)
+				triangle.setVisible(true);
+			return hbox;
+		});
+		selectedCodeArea.setParagraphGraphicFactory(graphicFactory.get(1));
 	}
 
 	// handle MenuItems: New and Open
@@ -224,11 +227,8 @@ public class CodeAreaController {
 			Node indicator = lineIndicatorFactory.apply(line);
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
-				toggleLineBreakpoint(line, (Circle)((Label) bp).getGraphic(), click);
-//				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-//					Node circle = ((Label) bp).getGraphic();
-//					circle.setVisible(!circle.isVisible());
-//				}
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
+					toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);
@@ -338,26 +338,26 @@ public class CodeAreaController {
 		return tabsWithFile.get(selectedTab);
 	}
 
-	public Collection<File> getOpenedFiles(){
+	public Collection<File> getOpenedFiles() {
 		return tabsWithFile.values();
 	}
-	
+
 	/**
 	 * @param file must exist and on debugger's sourcepath
 	 */
-	public void gotoTabOfFile(File file) {//TODO lineIndicator
-		boolean[] isOpened = {false};
+	public void gotoTabOfFile(File file) {// TODO lineIndicator
+		boolean[] isOpened = { false };
 		tabsWithFile.forEach((t, f) -> {
-			if(f.equals(file)) {
+			if (f.equals(file)) {
 				tabPane.getSelectionModel().select(t);
 				isOpened[0] = true;
 			}
 		});
-		if(!isOpened[0]) {
+		if (!isOpened[0]) {
 			newTab(file);
 		}
 	}
-	
+
 	public void gotoTabOfError(File file) {
 		String name = file.getName();
 		String content = "can't open this file";
@@ -365,8 +365,12 @@ public class CodeAreaController {
 		tabPane.getTabs().add(tab);
 		tabPane.getSelectionModel().select(tab);
 	}
-	
+
 	public void setCurrLine(int line) {
 		this.currLine.set(line);
+	}
+	
+	public int getCurrLine() {
+		return this.currLine.get();
 	}
 }
