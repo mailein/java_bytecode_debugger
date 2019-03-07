@@ -5,6 +5,7 @@ import debugger.dataType.Watchpoint;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -33,33 +34,6 @@ public class WatchpointAreaController {
 
 	@FXML
 	private void initialize() {
-		TableColumn<Watchpoint, String> historyCol = new TableColumn<>();// dummy column for history button
-		historyCol.setCellValueFactory(new PropertyValueFactory<>(""));
-		historyCol.setCellFactory(new Callback<TableColumn<Watchpoint, String>, TableCell<Watchpoint, String>>() {
-			@Override
-			public TableCell<Watchpoint, String> call(TableColumn<Watchpoint, String> param) {
-				TableCell<Watchpoint, String> cell = new TableCell<>() {
-					Button button = new Button("History");
-					@Override
-					public void updateItem(String item, boolean empty) {
-						super.updateItem(item, empty);
-						if (empty) {
-							setGraphic(null);
-							setText(null);
-						} else {
-							button.setOnAction(event -> {
-								Watchpoint wp = watchpoints.get(getIndex());
-								handleHistory(wp);
-							});
-							setGraphic(button);
-							setText(null);
-						}
-					}
-				};
-				return cell;
-			}
-		});
-
 		TableColumn<Watchpoint, String> nameCol = new TableColumn<Watchpoint, String>("Name");
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
 		nameCol.setMinWidth(50);
@@ -86,6 +60,33 @@ public class WatchpointAreaController {
 		valueCol.setCellValueFactory(new PropertyValueFactory<>("value"));
 		valueCol.setMinWidth(100);
 		valueCol.setEditable(false);
+		
+		TableColumn<Watchpoint, String> historyCol = new TableColumn<>();// dummy column for history button
+		historyCol.setCellValueFactory(new PropertyValueFactory<>(""));
+		historyCol.setCellFactory(new Callback<TableColumn<Watchpoint, String>, TableCell<Watchpoint, String>>() {
+			@Override
+			public TableCell<Watchpoint, String> call(TableColumn<Watchpoint, String> param) {
+				TableCell<Watchpoint, String> cell = new TableCell<>() {
+					Button button = new Button("History");
+					@Override
+					public void updateItem(String item, boolean empty) {
+						super.updateItem(item, empty);
+						if (empty) {
+							setGraphic(null);
+							setText(null);
+						} else {
+							button.setOnAction(event -> {
+								Watchpoint wp = watchpoints.get(getIndex());
+								handleHistory(wp);
+							});
+							setGraphic(button);
+							setText(null);
+						}
+					}
+				};
+				return cell;
+			}
+		});
 
 		table.setItems(watchpoints);
 		table.setEditable(true);
@@ -138,9 +139,12 @@ public class WatchpointAreaController {
 		TableView<HistoryRecord> historyTable = new TableView<>();
 		historyTable.setItems(wp.getHistory());
 		historyTable.getColumns().addAll(nameCol, locationCol, threadCol, readWriteCol, valueOldCol, valueNewCol);
+		historyTable.setMinSize(300, 300);
 		
 		VBox historyVbox = new VBox(5.0);
+		historyVbox.setPadding(new Insets(5, 0, 0, 5));
 		historyVbox.getChildren().addAll(historyTableLabel, historyTable);
+		historyTable.prefHeightProperty().bind(historyVbox.heightProperty());
 		
 		Scene scene = new Scene(historyVbox);
 		Stage stage = new Stage();
