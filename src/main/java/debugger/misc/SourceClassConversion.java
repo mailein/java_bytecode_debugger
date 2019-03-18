@@ -45,6 +45,16 @@ public class SourceClassConversion {
 		return fileClasspath;
 	}
 	
+	public static Path mapClassName2FileBytecodepath(String className, Path bytecodepath) {
+		String[] names = className.split("\\.");
+		Path fileBytecodepath = bytecodepath;
+		for(String name : names) {
+			fileBytecodepath = fileBytecodepath.resolve(name);
+		}
+		fileBytecodepath = Paths.get(fileBytecodepath.toString() + ".bytecode");
+		return fileBytecodepath;
+	}
+	
 	/**
 	 * @param sourcepath: debugger's sourcepath, eg. path\to\debugger
 	 * @param locationSourcepath: fileSourcepath with no leading sourcepath and no leading fileSeparator, eg. count\Main.java

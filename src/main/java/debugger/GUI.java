@@ -8,6 +8,7 @@ import java.util.Map;
 
 import debugger.dataType.Configuration;
 import debugger.view.BreakpointAreaController;
+import debugger.view.BytecodeAreaController;
 import debugger.view.CodeAreaController;
 import debugger.view.LocalVarAreaController;
 import debugger.view.OverviewController;
@@ -44,6 +45,7 @@ public class GUI extends Application {
 	private static WatchpointAreaController watchpointAreaController;
 	private static BreakpointAreaController breakpointAreaController;
 	private static LocalVarAreaController localVarAreaController;
+	private static BytecodeAreaController bytecodeAreaController;
 
 	//Breakpoint setting depends on this classpath
 	//these are the current configuration's sourcepath and classpath 
@@ -152,6 +154,7 @@ public class GUI extends Application {
 			watchpointAreaController = overviewController.getWatchpointAreaController();
 			breakpointAreaController = overviewController.getBreakpointAreaController();
 			localVarAreaController = overviewController.getLocalVarAreaController();
+			bytecodeAreaController = overviewController.getBytecodeAreaController();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -201,6 +204,10 @@ public class GUI extends Application {
 
 	public static LocalVarAreaController getLocalVarAreaController() {
 		return localVarAreaController;
+	}
+
+	public static BytecodeAreaController getBytecodeAreaController() {
+		return bytecodeAreaController;
 	}
 
 	public static StringProperty getSourcepath() {

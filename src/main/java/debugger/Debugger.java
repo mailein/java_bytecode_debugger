@@ -51,6 +51,7 @@ import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.ModificationWatchpointRequest;
+import com.sun.jdi.request.StepRequest;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
@@ -88,6 +89,8 @@ public class Debugger implements Runnable {
 	private String classpath;
 	private boolean debugMode;
 
+	private String bytecodepath;
+
 	/**
 	 * @param mainClass  is complete name, eg. countdownZuZweit.Main
 	 * @param sourcepath
@@ -98,6 +101,7 @@ public class Debugger implements Runnable {
 		this.mainClassName = mainClass;
 		this.sourcepath = sourcepath;
 		this.classpath = classpath;
+		this.bytecodepath = classpath;
 		this.debugMode = debugMode;
 	}
 
@@ -215,6 +219,8 @@ public class Debugger implements Runnable {
 			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 
+				System.out.println(className + "::::::::" + classRefType.methods());
+				
 				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
 
@@ -269,6 +275,15 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
+
+			StepRequest req = (StepRequest) stepEvent.request();
+//			if (req.size() == StepRequest.STEP_MIN && vm.canGetBytecodes()) {// stepi
+				System.out.println("method arg: " + method.argumentTypeNames() + ", name: " + method.name());
+//				Path fileBytecodepath = SourceClassConversion.mapClassName2FileBytecodepath(classRefType.name(),
+//						Paths.get(bytecodepath));
+//				GUI.getBytecodeAreaController().openFile(fileBytecodepath);
+				//TODO
+//			}
 
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
