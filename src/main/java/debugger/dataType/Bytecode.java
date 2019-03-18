@@ -17,9 +17,10 @@ public class Bytecode {// fileIndex starts with 1
 	public Bytecode(String content) {
 		this.content = content;
 		parseBytecode();
+		collectBCI();
 	}
 
-	private void parseBytecode() {// bytecode -> methods
+	private void parseBytecode() {// parsing content -> methods
 		String[] allLines = content.split("\\r?\\n");
 		String lastLine = "";
 		Method currMethod = null;
@@ -58,6 +59,28 @@ public class Bytecode {// fileIndex starts with 1
 		}
 	}
 
+	private void collectBCI() {
+		for(Method method : methods) {
+			int lastBCI = method.code.lastBCI;
+			List<LineNumberTableEntry> tableEntries = method.table.line2BCI;
+			for(int i = 0; i < tableEntries.size(); i++) {
+				LineNumberTableEntry entry = tableEntries.get(i);
+				int minIncluding = entry.startingBCI;
+				int maxExcluding = 0;
+				if(i + 1 == tableEntries.size()) {
+					maxExcluding = lastBCI + 1;
+				}else {
+					maxExcluding = tableEntries.get(i + 1).startingBCI;
+				}
+				//collect bci of the same line#
+				for(int bci : method.code.BCI2FileIndex.keySet()) {
+					if(bci >= minIncluding && bci < maxExcluding)
+						entry.BCIs.add(bci);
+				}
+			}
+		}
+	}
+	
 	class Method {
 		private String methodName;
 		private int fileStartIndex;
@@ -76,8 +99,9 @@ public class Bytecode {// fileIndex starts with 1
 		private String methodName;
 		private int fileStartIndex;
 		private int fileEndIndex;
+		private int lastBCI;
 
-		private Map<Integer, Integer> allBcis = new HashMap<>();// <bci, fileIndex>
+		private Map<Integer, Integer> BCI2FileIndex = new HashMap<>();// <bci, fileIndex>
 
 		private Code(String methodName, int fileStartIndex) {
 			this.methodName = methodName;
@@ -88,7 +112,8 @@ public class Bytecode {// fileIndex starts with 1
 			String tmp = oneCodeLine.substring(0, oneCodeLine.indexOf(":"));
 			try {
 				int bci = Integer.parseUnsignedInt(tmp.strip());
-				allBcis.put(bci, fileIndex);
+				BCI2FileIndex.put(bci, fileIndex);
+				lastBCI = bci;//update it every time, so that the last time it's right
 				return true;
 			} catch (NumberFormatException e) {
 				return false;
@@ -102,7 +127,7 @@ public class Bytecode {// fileIndex starts with 1
 		private int fileStartIndex;
 		private int fileEndIndex;
 
-		private List<LineNumberTableEntry> mapping = new ArrayList<>();// <line#, bci>
+		private List<LineNumberTableEntry> line2BCI = new ArrayList<>();// <line#, bci>
 
 		private LineNumberTable(String methodName, int fileStartIndex) {
 			this.methodName = methodName;
@@ -115,7 +140,7 @@ public class Bytecode {// fileIndex starts with 1
 			try {
 				int line = Integer.parseUnsignedInt(lineString.strip());
 				int bci = Integer.parseUnsignedInt(bciString.strip());
-				mapping.add(new LineNumberTableEntry(line, bci));
+				line2BCI.add(new LineNumberTableEntry(line, bci));
 				return true;
 			} catch (NumberFormatException e) {
 				return false;
@@ -125,11 +150,12 @@ public class Bytecode {// fileIndex starts with 1
 	
 	class LineNumberTableEntry{//can have multiple same lineNumber in one table
 		private int lineNumber;
-		private int bci;
+		private int startingBCI;
+		private List<Integer> BCIs = new ArrayList<>();//all bci for this lineNumber
 		
 		private LineNumberTableEntry(int lineNumber, int bci) {
 			this.lineNumber = lineNumber;
-			this.bci = bci;
+			this.startingBCI = bci;
 		}
 	}
 
