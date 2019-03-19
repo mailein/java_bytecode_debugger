@@ -35,7 +35,7 @@ public class BytecodeAreaController {
 	@FXML
 	private void initialize() {
 		this.anchorPane.setOnMouseEntered(e -> this.anchorPane.setOpacity(1.0));
-		this.anchorPane.setOnMouseExited(e -> this.anchorPane.setOpacity(0.5));
+		this.anchorPane.setOnMouseExited(e -> this.anchorPane.setOpacity(0.3));
 		this.anchorPane.setPrefWidth(200);
 		this.anchorPane.setBorder(
 				new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));

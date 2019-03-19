@@ -43,7 +43,6 @@ public class ThreadAreaController {
 		tree = new TreeView<String>(root);
 		anchorPane.getChildren().add(tree);
 		
-		
 		tree.prefWidthProperty().bind(anchorPane.widthProperty());// fit tree's size to parent anchorpane
 		tree.prefHeightProperty().bind(anchorPane.heightProperty());
 
@@ -78,14 +77,11 @@ public class ThreadAreaController {
 		this.debugger = debugger;
 		addDebuggerToTree(debugger);
 		System.out.println("added debugger to tree------------");
-		System.out.println(debugger.getThreads().size());
 	}
 
 	public void applyTerminatedMarker(Debugger debugger) {
-		String s = generateDebuggerName(debugger);
-		TreeItem<String> dbgTreeItem = getTreeItem(s, tree.getRoot());
-		s = terminatedMarker + s;
-		dbgTreeItem.setValue(s);
+		String s = terminatedMarker + generateDebuggerName(debugger);
+		debuggerTreeItem.setValue(s);
 
 		terminated = true;// can not remove this debugger yet
 
@@ -117,7 +113,7 @@ public class ThreadAreaController {
 					c.getAddedSubList().forEach(thread -> {
 						if (!terminated) {
 							TreeItem<String> threadTreeItem = addBranch(generateThreadName(thread), debuggerTreeItem);
-							threadTreeItem.setGraphic(getPause());
+							threadTreeItem.setGraphic(getPauseIcon());
 							tree.getSelectionModel().select(threadTreeItem);
 							this.selectedThread = thread;
 							GUI.getWatchpointAreaController().evalAll();
@@ -126,7 +122,7 @@ public class ThreadAreaController {
 				}
 				if (c.wasRemoved()) {
 					c.getRemoved().forEach(thread -> {
-						removeBranch(generateThreadName(thread), debuggerTreeItem);
+						removeBranch(generateThreadName(thread), debuggerTreeItem);//TODO remove after updating selectedThread? 
 						if (this.selectedThread.equals(thread)) {
 							tree.getSelectionModel().selectPrevious();
 							String s = tree.getSelectionModel().getSelectedItem().getValue();
@@ -139,30 +135,12 @@ public class ThreadAreaController {
 		});
 	}
 
-	private void toggleThread(MouseEvent e) {
-		if (e.getClickCount() == 2) {
-			ImageView node;
-			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
-				debugger.getSuspendedThreads().add(selectedThread);
-				node = getPlay();
-			} else {// paused -> play
-				debugger.getSuspendedThreads().remove(selectedThread);
-				node = getPause();
-			}
-			
-			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
-			threadTreeItem.setGraphic(node);
-		}
-	}
-
 	private void removeDebuggerFromTree(Debugger debugger) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)), tree.getRoot());
-		tree.getRoot().getChildren().remove(dbgTreeItem);
+		tree.getRoot().getChildren().remove(debuggerTreeItem);
 	}
 
 	private void removeDebuggerChildrenFromTree(Debugger debugger) {
-		TreeItem<String> dbgTreeItem = getTreeItem((terminatedMarker + generateDebuggerName(debugger)), tree.getRoot());
-		dbgTreeItem.getChildren().clear();
+		debuggerTreeItem.getChildren().clear();
 	}
 
 	// add threads to Debugger; add stackFrames to thread
@@ -246,6 +224,22 @@ public class ThreadAreaController {
 //		String bci = String.valueOf(loc.codeIndex());
 //		return className + "." + methodSignature + stackNameMarker + lineNumber + " bci:" + bci;
 //	}
+	
+	private void toggleThread(MouseEvent e) {
+		if (e.getClickCount() == 2) {
+			ImageView node;
+			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
+				debugger.getSuspendedThreads().add(selectedThread);
+				node = getPlayIcon();
+			} else {// paused -> play
+				debugger.getSuspendedThreads().remove(selectedThread);
+				node = getPauseIcon();
+			}
+			
+			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
+			threadTreeItem.setGraphic(node);
+		}
+	}
 
 	public Debugger getRunningDebugger() {
 		if (!terminated)
@@ -259,7 +253,7 @@ public class ThreadAreaController {
 
 	// https://www.iconfinder.com/icons/3855622/pause_play_icon
 	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
-	private ImageView getPause() {
+	private ImageView getPauseIcon() {
 		try {
 			return new ImageView(
 					new Image(new FileInputStream(new File("src/main/resources/debugger/view/pause.png"))));
@@ -269,7 +263,7 @@ public class ThreadAreaController {
 		}
 	}
 
-	private ImageView getPlay() {
+	private ImageView getPlayIcon() {
 		try {
 			return new ImageView(new Image(new FileInputStream(new File("src/main/resources/debugger/view/play.png"))));
 		} catch (FileNotFoundException e) {
