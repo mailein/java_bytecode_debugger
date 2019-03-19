@@ -31,14 +31,16 @@ public class BytecodeAreaController {
 	@FXML
 	private AnchorPane anchorPane = new AnchorPane();
 	private CodeArea bytecodeArea = new CodeArea();
-	
-	
+
 	@FXML
 	private void initialize() {
-		this.anchorPane.setPrefWidth(100);
-		this.anchorPane.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));
+		this.anchorPane.setOnMouseEntered(e -> this.anchorPane.setOpacity(1.0));
+		this.anchorPane.setOnMouseExited(e -> this.anchorPane.setOpacity(0.5));
+		this.anchorPane.setPrefWidth(200);
+		this.anchorPane.setBorder(
+				new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));
 //		this.anchorPane.setManaged(false);//exclude bytecodeArea!!
-		
+
 		VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(bytecodeArea);
 		this.anchorPane.getChildren().add(scrollPane);
 		AnchorPane.setTopAnchor(scrollPane, 0.0);
@@ -53,8 +55,8 @@ public class BytecodeAreaController {
 			return null;
 		}
 	}
-	
-	public void openFile(Path fileBytecodepath) {
+
+	public void openFile(Path fileBytecodepath) {// get method from correct *.class(possibly anonymous class)
 		String content = "";
 		try {
 			Scanner scanner = new Scanner(fileBytecodepath.toFile());
@@ -77,5 +79,5 @@ public class BytecodeAreaController {
 		};
 		bytecodeArea.setParagraphGraphicFactory(graphicFactory);
 	}
-	
+
 }

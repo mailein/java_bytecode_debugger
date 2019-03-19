@@ -20,11 +20,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 
-public class ThreadAreaController {// TODO handle resume and suspend threadReference
-	// tree > root > debuggers > threadReferences for each debugger > stackFrames
-	// for each threadReference
+public class ThreadAreaController {
+	// tree > root > debugger > threadReferences > stackFrames per threadReference
 	@FXML
-	private AnchorPane anchorPane = new AnchorPane();
+	private AnchorPane anchorPane;
 	private TreeView<String> tree;
 	TreeItem<String> debuggerTreeItem;
 	private Debugger debugger;

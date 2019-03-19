@@ -154,7 +154,7 @@ public class GUI extends Application {
 			watchpointAreaController = overviewController.getWatchpointAreaController();
 			breakpointAreaController = overviewController.getBreakpointAreaController();
 			localVarAreaController = overviewController.getLocalVarAreaController();
-			bytecodeAreaController = overviewController.getBytecodeAreaController();
+			bytecodeAreaController = codeAreaController.getBytecodeAreaController();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

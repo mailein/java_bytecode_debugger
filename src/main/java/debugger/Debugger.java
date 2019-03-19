@@ -249,6 +249,8 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
 
+			System.out.println(method.declaringType());
+			
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			// refresh watchpoint, localVar

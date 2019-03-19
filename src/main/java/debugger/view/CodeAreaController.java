@@ -35,6 +35,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -66,6 +67,8 @@ public class CodeAreaController {
 	private AnchorPane anchorPane = new AnchorPane();
 	@FXML
 	private TabPane tabPane = new TabPane();
+	private AnchorPane bytecodeArea;
+	private BytecodeAreaController bytecodeAreaController;
 
 	private int newCount = 1;
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();// TODO same file can only be opened in one tab
@@ -134,6 +137,21 @@ public class CodeAreaController {
 
 	@FXML
 	private void initialize() {// happens after constructor
+		//bytecodeArea
+		FXMLLoader loader = new FXMLLoader();
+		loader.setLocation(GUI.class.getResource("view/BytecodeArea.fxml"));
+		try {
+			bytecodeArea = (AnchorPane) loader.load();
+			
+			anchorPane.getChildren().add(bytecodeArea);
+			AnchorPane.setTopAnchor(bytecodeArea, 30.0);
+			AnchorPane.setBottomAnchor(bytecodeArea, 15.0);
+			AnchorPane.setRightAnchor(bytecodeArea, 15.0);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		bytecodeAreaController = (BytecodeAreaController) loader.getController();
+		
 		// update selectedTab
 		this.tabPane.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
 			this.selectedTab = this.tabPane.getSelectionModel().getSelectedItem();
@@ -372,5 +390,9 @@ public class CodeAreaController {
 	
 	public int getCurrLine() {
 		return this.currLine.get();
+	}
+
+	public BytecodeAreaController getBytecodeAreaController() {
+		return bytecodeAreaController;
 	}
 }

@@ -19,7 +19,7 @@ public class Bytecode {// fileIndex starts with 1
 		parseBytecode();
 		collectBCI();
 	}
-
+	
 	private void parseBytecode() {// parsing content -> methods
 		String[] allLines = content.split("\\r?\\n");
 		String lastLine = "";
