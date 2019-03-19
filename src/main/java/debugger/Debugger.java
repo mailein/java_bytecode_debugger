@@ -248,11 +248,12 @@ public class Debugger implements Runnable {
 			}
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-
-			System.out.println(method.declaringType());
+			System.out.println(method.genericSignature());
 			
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
+			//refresh stackFrames
+			GUI.getThreadAreaController().updateStackFrameBranches();
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, breakpointEvent);
 			GUI.getWatchpointAreaController().evalAll();
@@ -289,6 +290,8 @@ public class Debugger implements Runnable {
 
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
+			//refresh stackFrames
+			GUI.getThreadAreaController().updateStackFrameBranches();
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, stepEvent);
 			GUI.getWatchpointAreaController().evalAll();
