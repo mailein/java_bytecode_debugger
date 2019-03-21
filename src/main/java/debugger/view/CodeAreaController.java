@@ -71,7 +71,7 @@ public class CodeAreaController {
 	private BytecodeAreaController bytecodeAreaController;
 
 	private int newCount = 1;
-	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();// TODO same file can only be opened in one tab
+	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
 	private Tab selectedTab = null;
 	private CodeArea selectedCodeArea = null;
 	private IntegerProperty currLine = new SimpleIntegerProperty();
@@ -179,7 +179,8 @@ public class CodeAreaController {
 	public void refreshParagraphGraphicFactory(int currLineOv, int currLineNv) {
 		List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
 		graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
-
+		if(graphicFactory.get(0) == null)
+			return;
 		graphicFactory.add(line -> {
 			HBox hbox = (HBox) graphicFactory.get(0).apply(line);
 
@@ -214,7 +215,10 @@ public class CodeAreaController {
 
 	// handle MenuItems: New and Open
 	public void newTab(File file) {
-//		activateClasspath();
+		//if file opened, select the tab of that file
+		boolean ret = avoidOpeningSameFile(file);
+		if(ret)
+			return;
 		// get name and content
 		String tempName = file.getName();
 		String content = "";
@@ -368,7 +372,8 @@ public class CodeAreaController {
 		tabsWithFile.forEach((t, f) -> {
 			if (f.equals(file)) {
 				tabPane.getSelectionModel().select(t);
-				isOpened[0] = true;
+				if(f.equals(file))
+					isOpened[0] = true;
 			}
 		});
 		if (!isOpened[0]) {
@@ -377,13 +382,31 @@ public class CodeAreaController {
 	}
 
 	public void gotoTabOfError(File file) {
+		boolean ret = avoidOpeningSameFile(file);
+		if(ret)
+			return;
 		String name = file.getName();
 		String content = "can't open this file";
-		Tab tab = new Tab(name, new Label(content));
-		tabPane.getTabs().add(tab);
-		tabPane.getSelectionModel().select(tab);
+		CodeArea codeArea = new CodeArea(content);
+		codeArea.setEditable(false);
+		Tab tab = new Tab(name, new VirtualizedScrollPane<>(codeArea));
+		Platform.runLater(() -> {
+			tabPane.getTabs().add(tab);
+			tabPane.getSelectionModel().select(tab);
+		});
 	}
 
+	private boolean avoidOpeningSameFile(File fileToBeOpened) {
+		boolean[] ret = {false};
+		tabsWithFile.forEach((t, f) -> {
+			if(f.getName().equals(fileToBeOpened.getName())) {
+				tabPane.getSelectionModel().select(t);
+				ret[0] = true;
+			}
+		});
+		return ret[0];
+	}
+	
 	public void setCurrLine(int line) {
 		this.currLine.set(line);
 	}

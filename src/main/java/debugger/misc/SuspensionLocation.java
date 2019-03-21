@@ -6,20 +6,17 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.Map;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Location;
 
 import debugger.Debugger;
 import debugger.GUI;
-import javafx.scene.control.Tab;
 
 public class SuspensionLocation {
 
 	public static void gotoLocationFile(Location location) {
-			File file = new File(loc2sourcePath(location));
+			File file = new File(loc2fileSourcepath(location));
 			if(inProject(location)) {
 				GUI.getCodeAreaController().gotoTabOfFile(file);
 			}else {
@@ -27,27 +24,30 @@ public class SuspensionLocation {
 			}
 	}
 	
-	private static String loc2sourcePath(Location location) {
-		try {
-			String locationPath = location.sourcePath();
-			return locationPath;
-		} catch (AbsentInformationException e) {
-			e.printStackTrace();
-		}
-		return "";
-	}
-	
 	private static boolean inProject(Location location) {
-		String locationPath = loc2sourcePath(location);
-		if(!locationPath.isEmpty()) {
+		String fileSourcepath = loc2fileSourcepath(location);
+		if(!fileSourcepath.isEmpty()) {
 			Debugger debugger = GUI.getThreadAreaController().getRunningDebugger();
-			if(Files.isRegularFile(Paths.get(debugger.sourcepath(), locationPath), LinkOption.NOFOLLOW_LINKS)) {
+			if(Files.isRegularFile(Paths.get(fileSourcepath), LinkOption.NOFOLLOW_LINKS)) {
 				return true;
 			}
 		}
 		return false;
 	}
+	
+	private static String loc2fileSourcepath(Location location) {
+		try {
+			String locationPath = location.sourcePath();
+			Path sourcepath = Paths.get(GUI.getThreadAreaController().getRunningDebugger().sourcepath());
+			Path fileSourcepath = SourceClassConversion.getFileSourcepath(sourcepath, Paths.get(locationPath));
+			return fileSourcepath.toString();
+		} catch (AbsentInformationException e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
 
+	//called by LocalVarAreaController
 	public static boolean atSelectedTab(Location location) {
 		//file path
 		File file = GUI.getCodeAreaController().getFileOfSelectedTab();
