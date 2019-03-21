@@ -394,9 +394,13 @@ public class CodeAreaController {
 			tabPane.getTabs().add(tab);
 			tabPane.getSelectionModel().select(tab);
 		});
+		tabsWithFile.put(tab, file);
 	}
 
 	private boolean avoidOpeningSameFile(File fileToBeOpened) {
+		tabsWithFile.forEach((t, f) -> {
+			System.out.println("in avoiding same named file: " + f.getName());
+		});
 		boolean[] ret = {false};
 		tabsWithFile.forEach((t, f) -> {
 			if(f.getName().equals(fileToBeOpened.getName())) {
