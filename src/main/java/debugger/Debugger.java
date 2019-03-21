@@ -253,7 +253,7 @@ public class Debugger implements Runnable {
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			//refresh stackFrames
-			GUI.getThreadAreaController().updateStackFrameBranches();
+			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, breakpointEvent);
 			GUI.getWatchpointAreaController().evalAll();
@@ -291,7 +291,7 @@ public class Debugger implements Runnable {
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			//refresh stackFrames
-			GUI.getThreadAreaController().updateStackFrameBranches();
+			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, stepEvent);
 			GUI.getWatchpointAreaController().evalAll();
