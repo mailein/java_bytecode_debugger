@@ -58,7 +58,9 @@ import debugger.dataType.HistoryRecord;
 import debugger.dataType.LineBreakpoint;
 import debugger.dataType.Watchpoint;
 import debugger.misc.SourceClassConversion;
+import debugger.misc.SuspensionLocation;
 import debugger.view.BreakpointAreaController;
+import debugger.view.BytecodeAreaController;
 import debugger.view.WatchpointAreaController;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -220,7 +222,7 @@ public class Debugger implements Runnable {
 				classes.put(className, classRefType);
 
 				System.out.println(className + "::::::::" + classRefType.methods());
-				
+
 				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
 
@@ -246,13 +248,12 @@ public class Debugger implements Runnable {
 			if (classRefType == null) {
 				return;
 			}
-			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
+			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
-			System.out.println(method.genericSignature());
-			
+
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-			//refresh stackFrames
+			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, breakpointEvent);
@@ -276,21 +277,29 @@ public class Debugger implements Runnable {
 			if (classRefType == null) {
 				return;
 			}
-			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")" + "\n|line: " + lineNumber
+			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: " + lineNumber
 					+ "\n|bci: " + bci + "\n|_");
 
 			StepRequest req = (StepRequest) stepEvent.request();
-//			if (req.size() == StepRequest.STEP_MIN && vm.canGetBytecodes()) {// stepi
+			if (req.size() == StepRequest.STEP_MIN) {// stepi
 				System.out.println("method arg: " + method.argumentTypeNames() + ", name: " + method.name());
-//				Path fileBytecodepath = SourceClassConversion.mapClassName2FileBytecodepath(classRefType.name(),
-//						Paths.get(bytecodepath));
-//				GUI.getBytecodeAreaController().openFile(fileBytecodepath);
-				//TODO
-//			}
+				String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);//finds also anonymous class
+				System.out.println("fileClasspath: " + fileClasspath);
+				if(!fileClasspath.isEmpty()) {
+					BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
+//					Platform.runLater(() -> {
+						bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
+						bytecodeAreaController.setBytecodeAreaVisible(true);
+//					});
+				}
+			}else {
+				Platform.runLater(() -> GUI.getBytecodeAreaController().setBytecodeAreaVisible(false));
+			}
 
 			// for line indicator
+			// TODO sometimes no indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-			//refresh stackFrames
+			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, stepEvent);

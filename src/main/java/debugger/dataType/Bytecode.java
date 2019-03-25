@@ -12,18 +12,18 @@ import java.util.Scanner;
 public class Bytecode {// fileIndex starts with 1
 
 	private String content;
-	private List<Method> methods = new ArrayList<>();
+	private List<MyMethod> methods = new ArrayList<>();
 
 	public Bytecode(String content) {
 		this.content = content;
 		parseBytecode();
 		collectBCI();
 	}
-	
+
 	private void parseBytecode() {// parsing content -> methods
 		String[] allLines = content.split("\\r?\\n");
 		String lastLine = "";
-		Method currMethod = null;
+		MyMethod currMethod = null;
 		boolean codeParsing = false;
 		boolean tableParsing = false;
 		for (int i = 0; i < allLines.length; i++) {
@@ -41,7 +41,7 @@ public class Bytecode {// fileIndex starts with 1
 			}
 
 			if (!codeParsing && !tableParsing && line.strip().equals("Code:") && lastLine.contains("(")) {
-				currMethod = new Method(lastLine, i + 1);
+				currMethod = new MyMethod(lastLine, i + 1);
 				methods.add(currMethod);
 				codeParsing = true;
 				currMethod.code = new Code(currMethod.methodName, i + 2);
@@ -60,48 +60,67 @@ public class Bytecode {// fileIndex starts with 1
 	}
 
 	private void collectBCI() {
-		for(Method method : methods) {
-			int lastBCI = method.code.lastBCI;
-			List<LineNumberTableEntry> tableEntries = method.table.line2BCI;
-			for(int i = 0; i < tableEntries.size(); i++) {
+		for (MyMethod method : methods) {
+			long lastBCI = method.code.lastBCI;
+			List<LineNumberTableEntry> tableEntries = method.table.tableEntries;
+			for (int i = 0; i < tableEntries.size(); i++) {
 				LineNumberTableEntry entry = tableEntries.get(i);
-				int minIncluding = entry.startingBCI;
-				int maxExcluding = 0;
-				if(i + 1 == tableEntries.size()) {
+				long minIncluding = entry.startingBCI;
+				long maxExcluding = 0;
+				if (i + 1 == tableEntries.size()) {
 					maxExcluding = lastBCI + 1;
-				}else {
+				} else {
 					maxExcluding = tableEntries.get(i + 1).startingBCI;
 				}
-				//collect bci of the same line#
-				for(int bci : method.code.BCI2FileIndex.keySet()) {
-					if(bci >= minIncluding && bci < maxExcluding)
+				// collect bci of the same line#
+				for (long bci : method.code.BCI2FileIndex.keySet()) {
+					if (bci >= minIncluding && bci < maxExcluding)
 						entry.BCIs.add(bci);
 				}
 			}
 		}
 	}
-	
-	class Method {
-		private String methodName;
+
+	public class MyMethod {
+		private String methodName;// the whole line above the line "Code:"
 		private int fileStartIndex;
 //		private int fileEndIndex;// after the last method's may not be an empty line
 
 		private Code code;
 		private LineNumberTable table;
 
-		private Method(String methodName, int fileStartIndex) {
+		private MyMethod(String methodName, int fileStartIndex) {
 			this.methodName = methodName;
 			this.fileStartIndex = fileStartIndex;
 		}
+
+		public boolean matchName(String returnTypeName, String name, List<String> argumentTypeNames) {
+			String[] arg = { "" };
+			argumentTypeNames.forEach(s -> arg[0] = arg[0] + s + ", ");
+			if (arg[0].endsWith(", "))
+				arg[0] = arg[0].substring(0, arg[0].lastIndexOf(", "));
+			String str = returnTypeName + " " + name + "(" + arg[0] + ");";
+			if (methodName.contains(str))
+				return true;
+			return false;
+		}
+
+		public List<LineNumberTableEntry> getTableEntries() {
+			return table.tableEntries;
+		}
+
+		public Map<Long, Integer> getBCI2FileIndex() {
+			return code.BCI2FileIndex;
+		}
 	}
 
-	class Code {// "Code:"
+	private class Code {// "Code:"
 		private String methodName;
 		private int fileStartIndex;
 		private int fileEndIndex;
-		private int lastBCI;
+		private long lastBCI;
 
-		private Map<Integer, Integer> BCI2FileIndex = new HashMap<>();// <bci, fileIndex>
+		private Map<Long, Integer> BCI2FileIndex = new HashMap<>();// <bci, fileIndex>
 
 		private Code(String methodName, int fileStartIndex) {
 			this.methodName = methodName;
@@ -111,23 +130,22 @@ public class Bytecode {// fileIndex starts with 1
 		private boolean parseOneCodeLine(String oneCodeLine, int fileIndex) {
 			String tmp = oneCodeLine.substring(0, oneCodeLine.indexOf(":"));
 			try {
-				int bci = Integer.parseUnsignedInt(tmp.strip());
+				long bci = Long.parseUnsignedLong(tmp.strip());
 				BCI2FileIndex.put(bci, fileIndex);
-				lastBCI = bci;//update it every time, so that the last time it's right
+				lastBCI = bci;// update it every time, so that the last time it's right
 				return true;
 			} catch (NumberFormatException e) {
 				return false;
 			}
 		}
-
 	}
 
-	class LineNumberTable {// "LineNumberTable:"
+	private class LineNumberTable {// "LineNumberTable:"
 		private String methodName;
 		private int fileStartIndex;
 		private int fileEndIndex;
 
-		private List<LineNumberTableEntry> line2BCI = new ArrayList<>();// <line#, bci>
+		private List<LineNumberTableEntry> tableEntries = new ArrayList<>();// <line#, bci>
 
 		private LineNumberTable(String methodName, int fileStartIndex) {
 			this.methodName = methodName;
@@ -139,24 +157,36 @@ public class Bytecode {// fileIndex starts with 1
 			String bciString = oneTableLine.substring(oneTableLine.indexOf(":") + 1);
 			try {
 				int line = Integer.parseUnsignedInt(lineString.strip());
-				int bci = Integer.parseUnsignedInt(bciString.strip());
-				line2BCI.add(new LineNumberTableEntry(line, bci));
+				long bci = Integer.parseUnsignedInt(bciString.strip());
+				tableEntries.add(new LineNumberTableEntry(line, bci));
 				return true;
 			} catch (NumberFormatException e) {
 				return false;
 			}
 		}
 	}
-	
-	class LineNumberTableEntry{//can have multiple same lineNumber in one table
+
+	public class LineNumberTableEntry {// can have multiple same lineNumber in one table
 		private int lineNumber;
-		private int startingBCI;
-		private List<Integer> BCIs = new ArrayList<>();//all bci for this lineNumber
-		
-		private LineNumberTableEntry(int lineNumber, int bci) {
+		private long startingBCI;
+		private List<Long> BCIs = new ArrayList<>();// all bci for this lineNumber
+
+		private LineNumberTableEntry(int lineNumber, long startingBCI) {
 			this.lineNumber = lineNumber;
-			this.startingBCI = bci;
+			this.startingBCI = startingBCI;
 		}
+
+		public int getLineNumber() {
+			return lineNumber;
+		}
+
+		public List<Long> getBCIs() {
+			return BCIs;
+		}
+	}
+
+	public List<MyMethod> getMethods() {
+		return methods;
 	}
 
 	public static void main(String[] args) {

@@ -220,6 +220,7 @@ public class ThreadAreaController {
 		}
 		// top frame's *.java open in selectedTab?
 		Location loc = topFrame.location();
+		System.out.println("before goto location, thread: " + thread.name());
 		SuspensionLocation.gotoLocationFile(loc);
 	}
 
@@ -272,7 +273,7 @@ public class ThreadAreaController {
 		String methodName = loc.method().name();
 		String[] argNames = { "" };
 		loc.method().argumentTypeNames().forEach(argName -> argNames[0] = argNames[0] + argName + ", ");
-		if (argNames[0].contains(", "))
+		if (argNames[0].endsWith(", "))
 			argNames[0] = argNames[0].substring(0, argNames[0].lastIndexOf(", "));
 		String lineNumber = String.valueOf(loc.lineNumber());
 		String bci = String.valueOf(loc.codeIndex());

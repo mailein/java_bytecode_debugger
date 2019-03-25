@@ -68,6 +68,8 @@ public class LocalVarAreaController {
 			}
 		} catch (IncompatibleThreadStateException e) {
 			e.printStackTrace();
+		}catch (IndexOutOfBoundsException e) {
+			//frame index
 		}
 	}
 
