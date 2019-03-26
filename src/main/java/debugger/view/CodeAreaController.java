@@ -27,6 +27,7 @@ import debugger.GUI;
 import debugger.dataType.LineBreakpoint;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -418,5 +419,9 @@ public class CodeAreaController {
 
 	public BytecodeAreaController getBytecodeAreaController() {
 		return bytecodeAreaController;
+	}
+	
+	public DoubleProperty getAnchorPanePrefWidthProperty() {
+		return this.anchorPane.prefWidthProperty();
 	}
 }

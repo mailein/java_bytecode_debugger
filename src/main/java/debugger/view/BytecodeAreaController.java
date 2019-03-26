@@ -2,6 +2,7 @@ package debugger.view;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import org.fxmisc.richtext.LineNumberFactory;
 
 import com.sun.jdi.Method;
 
+import debugger.GUI;
 import debugger.dataType.Bytecode;
 import debugger.dataType.Bytecode.LineNumberTableEntry;
 import debugger.dataType.Bytecode.MyMethod;
@@ -35,6 +37,7 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Rectangle;
 
 public class BytecodeAreaController {
 	@FXML
@@ -47,22 +50,31 @@ public class BytecodeAreaController {
 
 	@FXML
 	private void initialize() {
-		this.anchorPane.setOnMouseEntered(e -> this.anchorPane.setOpacity(1.0));
-		this.anchorPane.setOnMouseExited(e -> this.anchorPane.setOpacity(0.3));
-		this.anchorPane.setPrefWidth(200);
+		this.anchorPane.setOnMouseEntered(e -> halfWidthOfCodeArea());
+		this.anchorPane.setOnMouseExited(e -> {
+			this.anchorPane.prefWidthProperty().unbind();
+			this.anchorPane.setPrefWidth(25);	
+		});
 		this.anchorPane.setBorder(
 				new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));
 		VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(bytecodeArea);
+		this.anchorPane.getChildren().add(scrollPane);
+		AnchorPane.setBottomAnchor(scrollPane, 0.0);
+		AnchorPane.setLeftAnchor(scrollPane, 0.0);
+		AnchorPane.setRightAnchor(scrollPane, 0.0);
+		AnchorPane.setTopAnchor(scrollPane, 0.0);
+		
+		this.anchorPane.setManaged(false);
 	}
 
 	class LineRangeFactory implements IntFunction<Node> {
 		@Override
 		public Node apply(int value) {
-			Label label = new Label();
-			label.setBackground(new Background(new BackgroundFill(Color.ORANGE, CornerRadii.EMPTY, Insets.EMPTY)));
+			Rectangle square = new Rectangle(10.0, 10.0);
+			square.setFill(Color.ORANGE);
 			if (!fileIndices.contains(value))
-				label.setVisible(false);
-			return label;
+				square.setVisible(false);
+			return square;
 		}
 	}
 
@@ -77,13 +89,12 @@ public class BytecodeAreaController {
 		}
 	}
 
-	public void openFile(String pathname, Method method, int lineNumber, long bci) {// get method from correct
-																						// *.class(possibly anonymous
-																						// class)
+	public void openFile(String pathname, Method method, int lineNumber, long bci) {
+		String bytecodePathname = pathname.replace(".class", ".bytecode");
 		boolean findMethod = false;
 		String content = "";
 		try {
-			Scanner scanner = new Scanner(new File(pathname));
+			Scanner scanner = new Scanner(new File(bytecodePathname));
 			content = scanner.useDelimiter("\\Z").next();
 			scanner.close();
 		} catch (NoSuchElementException e) {
@@ -125,10 +136,12 @@ public class BytecodeAreaController {
 
 		IntFunction<Node> lineNumberFactory = LineNumberFactory.get(bytecodeArea);
 		IntFunction<Node> lineRangeFactory = new LineRangeFactory();
-		IntFunction<Node> graphicFactory = line -> {
-			Node range = lineRangeFactory.apply(line);
+		IntFunction<Node> lineIndicatorFactory = new LineIndicatorFactory();
+		IntFunction<Node> graphicFactory = line -> {//it starts from 0
+			Node range = lineRangeFactory.apply(line + 1);
 			Node lineNum = lineNumberFactory.apply(line);
-			HBox hBox = new HBox(range, lineNum);
+			Node triangle = lineIndicatorFactory.apply(line + 1);
+			HBox hBox = new HBox(range, lineNum, triangle);
 			hBox.setAlignment(Pos.CENTER_LEFT);
 			return hBox;
 		};
@@ -136,8 +149,13 @@ public class BytecodeAreaController {
 	}
 
 	public void setBytecodeAreaVisible(boolean visible) {
+		halfWidthOfCodeArea();
 		this.anchorPane.setManaged(visible);
 		// TODO square(same line), line#, indicator
+	}
+	
+	private void halfWidthOfCodeArea() {
+		this.anchorPane.prefWidthProperty().bind(GUI.getCodeAreaController().getAnchorPanePrefWidthProperty().divide(2.0));
 	}
 
 }

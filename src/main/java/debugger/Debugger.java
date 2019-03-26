@@ -287,10 +287,10 @@ public class Debugger implements Runnable {
 				System.out.println("fileClasspath: " + fileClasspath);
 				if(!fileClasspath.isEmpty()) {
 					BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
-//					Platform.runLater(() -> {
+					Platform.runLater(() -> {
 						bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
 						bytecodeAreaController.setBytecodeAreaVisible(true);
-//					});
+					});
 				}
 			}else {
 				Platform.runLater(() -> GUI.getBytecodeAreaController().setBytecodeAreaVisible(false));
