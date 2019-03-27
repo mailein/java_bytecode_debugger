@@ -209,6 +209,7 @@ public class CodeAreaController {
 				triangle.setVisible(false);
 			if (line + 1 == currLineNv)
 				triangle.setVisible(true);
+			selectedCodeArea.showParagraphInViewport(currLineNv - 1);
 			return hbox;
 		});
 		selectedCodeArea.setParagraphGraphicFactory(graphicFactory.get(1));

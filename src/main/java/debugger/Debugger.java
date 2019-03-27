@@ -293,7 +293,9 @@ public class Debugger implements Runnable {
 					});
 				}
 			}else {
-				Platform.runLater(() -> GUI.getBytecodeAreaController().setBytecodeAreaVisible(false));
+//				Platform.runLater(() -> {
+					GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
+//				});
 			}
 
 			// for line indicator

@@ -12,6 +12,7 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
@@ -53,17 +54,18 @@ public class BytecodeAreaController {
 		this.anchorPane.setOnMouseEntered(e -> halfWidthOfCodeArea());
 		this.anchorPane.setOnMouseExited(e -> {
 			this.anchorPane.prefWidthProperty().unbind();
-			this.anchorPane.setPrefWidth(25);	
+			this.anchorPane.setPrefWidth(25);
 		});
 		this.anchorPane.setBorder(
 				new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));
+		bytecodeArea.setEditable(false);
 		VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(bytecodeArea);
 		this.anchorPane.getChildren().add(scrollPane);
 		AnchorPane.setBottomAnchor(scrollPane, 0.0);
 		AnchorPane.setLeftAnchor(scrollPane, 0.0);
 		AnchorPane.setRightAnchor(scrollPane, 0.0);
 		AnchorPane.setTopAnchor(scrollPane, 0.0);
-		
+
 		this.anchorPane.setManaged(false);
 	}
 
@@ -126,6 +128,7 @@ public class BytecodeAreaController {
 			return;
 		List<LineNumberTableEntry> matchingEntries = tableEntries.stream()
 				.filter(entry -> (entry.getLineNumber() == lineNumber)).collect(Collectors.toList());
+		fileIndices.clear();
 		for (LineNumberTableEntry entry : matchingEntries) {
 			List<Long> BCIs = entry.getBCIs();
 			for (long BCI : BCIs) {
@@ -133,11 +136,13 @@ public class BytecodeAreaController {
 			}
 		}
 		indicator = BCI2FileIndex.get(bci);
+		bytecodeArea.showParagraphInViewport(indicator - 1);
 
 		IntFunction<Node> lineNumberFactory = LineNumberFactory.get(bytecodeArea);
 		IntFunction<Node> lineRangeFactory = new LineRangeFactory();
 		IntFunction<Node> lineIndicatorFactory = new LineIndicatorFactory();
-		IntFunction<Node> graphicFactory = line -> {//it starts from 0
+		// line in CodeArea starts from 0, line in user's view from 1
+		IntFunction<Node> graphicFactory = line -> {
 			Node range = lineRangeFactory.apply(line + 1);
 			Node lineNum = lineNumberFactory.apply(line);
 			Node triangle = lineIndicatorFactory.apply(line + 1);
@@ -151,11 +156,13 @@ public class BytecodeAreaController {
 	public void setBytecodeAreaVisible(boolean visible) {
 		halfWidthOfCodeArea();
 		this.anchorPane.setManaged(visible);
+		this.anchorPane.setVisible(visible);
 		// TODO square(same line), line#, indicator
 	}
-	
+
 	private void halfWidthOfCodeArea() {
-		this.anchorPane.prefWidthProperty().bind(GUI.getCodeAreaController().getAnchorPanePrefWidthProperty().divide(2.0));
+		this.anchorPane.prefWidthProperty()
+				.bind(GUI.getCodeAreaController().getAnchorPanePrefWidthProperty().divide(2.0));
 	}
 
 }
