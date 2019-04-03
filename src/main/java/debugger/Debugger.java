@@ -1,11 +1,14 @@
 package debugger;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -66,6 +69,7 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.scene.control.TextArea;
 
 public class Debugger implements Runnable {
 
@@ -152,13 +156,23 @@ public class Debugger implements Runnable {
 		process = vm.process();
 
 		// redirect debuggee's IO
-		Thread outThread = new Thread(new IOThread(process.getInputStream(), System.out));
+		PrintStream ps = new PrintStream(new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+				Platform.runLater(() -> {
+					byte[] bb = {(byte)(b & 0xff)};
+					GUI.getOutputAreaController().append(new String(bb, StandardCharsets.UTF_8));
+				});
+			}
+		}, true);
+		Thread outThread = new Thread(new IOThread(process.getInputStream(), ps));
 		outThread.setDaemon(true);
 		outThread.start();
-		Thread errThread = new Thread(new IOThread(process.getErrorStream(), System.out));
+		Thread errThread = new Thread(new IOThread(process.getErrorStream(), ps));
 		errThread.setDaemon(true);
 		errThread.start();
 
+		
 		eventRequestManager = vm.eventRequestManager();
 
 		ClassPrepareRequest classPrepareRequest = eventRequestManager.createClassPrepareRequest();
@@ -171,9 +185,9 @@ public class Debugger implements Runnable {
 		threadStartRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 		threadStartRequest.enable();
 
-		if (debugMode) {
+//		if (debugMode) {//no output after hitting Button "Run", if debugMode is false
 			eventLoop();
-		}
+//		}
 
 		process.destroy();
 	}

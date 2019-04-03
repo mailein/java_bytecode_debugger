@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -39,7 +40,8 @@ public class ThreadAreaController {
 	Map<ThreadReference, TreeItem<String>> threadsTreeItems = new HashMap<>();
 	Map<ThreadReference, Map<TreeItem<String>, StackFrame>> stackFramesTreeItems = new HashMap<>();
 	private ThreadReference selectedThread;
-//	private StackFrame selectedStack;
+//	private StackFrame selectedStackFrame;
+//	private StackFrame prevStackFrame;//for popFrames
 
 	// to make sure thread has been added to threadsTreeItems,
 	// so that threadsTreeItems.get(thread) won't be null
@@ -66,25 +68,29 @@ public class ThreadAreaController {
 
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
-			if (nv.getValue().contains(debuggerNameMarker)) {
-				tree.getSelectionModel().selectNext();
+			if (!terminated && debugger != null) {
+				if (nv.getValue().contains(debuggerNameMarker)) {
+					tree.getSelectionModel().selectNext();
+				}
+				if (nv.getValue().contains(threadNameMarker)) {
+					this.selectedThread = String2Thread(nv.getValue());
+					GUI.getWatchpointAreaController().evalAll();//
+//					this.prevStackFrame = null;//current frame is top frame
+				}
+				if (nv.getValue().contains(stackNameMarker)) {
+					String threadString = nv.getParent().getValue();
+					this.selectedThread = String2Thread(threadString);
+					GUI.getWatchpointAreaController().evalAll();
+//					TreeItem<String> prevFrame = nv.previousSibling();
+//					if(prevFrame == null) {
+//						this.prevStackFrame = null;
+//						System.out.println("at top frame");
+//					}else {
+//						this.prevStackFrame = stackFramesTreeItems.get(selectedThread).get(prevFrame);
+//						System.out.println("prev frame is" + prevFrame.getValue());
+//					}
+				}
 			}
-			if (nv.getValue().contains(threadNameMarker)) {
-				this.selectedThread = String2Thread(nv.getValue());
-				GUI.getWatchpointAreaController().evalAll();
-//				try {
-//					this.selectedStack = this.selectedThread.frame(0);
-//				} catch (IncompatibleThreadStateException e) {
-//					e.printStackTrace();
-//				}
-			}
-//			if (nv.getValue().contains(stackNameMarker)) {
-//				String threadString = nv.getParent().getValue();
-//				String debuggerString = nv.getParent().getParent().getValue();
-//				this.selectedDebugger = String2Debugger(debuggerString);
-//				this.selectedThread = String2Thread(threadString);
-//				this.selectedStack = String2StackFrame(nv.getValue());
-//			}
 		});
 		tree.setShowRoot(false);
 	}
@@ -243,21 +249,6 @@ public class ThreadAreaController {
 		return null;
 	}
 
-	// TODO if this method is used after updateStackFrameBranches, then no Exception
-	private StackFrame String2StackFrame(String stackFrameString, ThreadReference thread) {
-		if (this.debugger == null || thread == null)
-			return null;
-		try {
-			for (StackFrame stackFrame : thread.frames()) {
-				if (stackFrameString.equals(generateStackFrameName(stackFrame)))
-					return stackFrame;
-			}
-		} catch (IncompatibleThreadStateException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
 	private String generateDebuggerName(Debugger dbg) {
 		return dbg.name() + debuggerNameMarker;
 	}
@@ -326,8 +317,8 @@ public class ThreadAreaController {
 			return null;
 		}
 	}
-
-//	public StackFrame getSelectedStack() {
-//		return selectedStack;
+//
+//	public StackFrame getPrevStackFrame() {
+//		return prevStackFrame;
 //	}
 }

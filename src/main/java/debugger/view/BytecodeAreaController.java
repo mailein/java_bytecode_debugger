@@ -156,8 +156,9 @@ public class BytecodeAreaController {
 	public void setBytecodeAreaVisible(boolean visible) {
 		halfWidthOfCodeArea();
 		this.anchorPane.setManaged(visible);
+		// don't why, but must have setVisible, set managed alone can't make
+		// bytecodeArea disappear
 		this.anchorPane.setVisible(visible);
-		// TODO square(same line), line#, indicator
 	}
 
 	private void halfWidthOfCodeArea() {

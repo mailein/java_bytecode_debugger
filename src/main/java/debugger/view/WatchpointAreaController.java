@@ -16,6 +16,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.HBox;
@@ -70,6 +71,7 @@ public class WatchpointAreaController {
 					Button button = new Button("History");
 					@Override
 					public void updateItem(String item, boolean empty) {
+						button.setTooltip(new Tooltip("add watchpoints BEFORE debugging to enable history"));
 						super.updateItem(item, empty);
 						if (empty) {
 							setGraphic(null);

@@ -14,4 +14,9 @@ public class OutputAreaController {
 	private void initialize() {
 		
 	}
+
+	public void append(String text) {
+		textArea.appendText(text);
+	}
+	
 }

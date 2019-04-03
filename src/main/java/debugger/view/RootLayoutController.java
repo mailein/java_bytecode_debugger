@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
 import com.sun.jdi.request.EventRequest;
@@ -85,7 +86,7 @@ public class RootLayoutController {
 		this.saveMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
 		this.saveAsMenuItem.setAccelerator(
 				new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
-		
+
 		this.newButton.setTooltip(new Tooltip("Ctrl+N"));
 		this.openButton.setTooltip(new Tooltip("Ctrl+O"));
 		this.saveButton.setTooltip(new Tooltip("Ctrl+S"));
@@ -96,9 +97,9 @@ public class RootLayoutController {
 		this.stepIntoButton.setTooltip(new Tooltip("F5"));
 		this.stepOverButton.setTooltip(new Tooltip("F6"));
 		this.stepReturnButton.setTooltip(new Tooltip("F7"));
-		
+
 		enableOrDisableButtons(true);
-		
+
 		Platform.runLater(() -> {
 			this.resumeButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F8),
 					() -> this.resumeButton.fire());
@@ -126,7 +127,7 @@ public class RootLayoutController {
 		this.stepOverButton.setDisable(toDisable);
 		this.stepReturnButton.setDisable(toDisable);
 	}
-	
+
 	@FXML
 	private void handleNew() {
 		File file = new File("");
@@ -443,15 +444,21 @@ public class RootLayoutController {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@FXML
-	private void handleResume() {//TODO why it doesn't work after suspend thread
+	private void handleResume() {// TODO why it doesn't work after suspend thread
+		// when not stepi, hide bytecodeArea
+		GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
+
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.resume();
 	}
-	
+
 	@FXML
 	private void handleTerminate() {
+		// when not stepi, hide bytecodeArea
+		GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
+
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.terminate();
 	}
@@ -473,8 +480,10 @@ public class RootLayoutController {
 			// delete step request of current thread
 			List<StepRequest> stepRequests = eventReqMgr.stepRequests();
 			for (StepRequest s : stepRequests) {
-				if (s.thread().equals(thread))
+				if (s.thread().equals(thread)) {
 					eventReqMgr.deleteEventRequest(s);
+					break;
+				}
 			}
 
 			System.out.println(thread.name() + " sets a new step request");
@@ -509,6 +518,16 @@ public class RootLayoutController {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		Debugger currentDebugger = threadAreaController.getRunningDebugger();
 		ThreadReference currentThread = threadAreaController.getSelectedThread();
+		// NO TODO popFrames before step(Into/Over/Return), enabling stepping based on
+		// selectedFrame
+//		StackFrame prevSf = GUI.getThreadAreaController().getPrevStackFrame();
+//		if(prevSf != null) {
+//			try {
+//				currentThread.popFrames(prevSf);
+//			} catch (Exception e) {//bug: com.sun.jdi.InvalidStackFrameException: Thread has been resumed
+//				e.printStackTrace();
+//			}
+//		}
 		StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 		stepi.execute();
 		currentDebugger.resume();

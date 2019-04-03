@@ -11,6 +11,7 @@ import debugger.view.BreakpointAreaController;
 import debugger.view.BytecodeAreaController;
 import debugger.view.CodeAreaController;
 import debugger.view.LocalVarAreaController;
+import debugger.view.OutputAreaController;
 import debugger.view.OverviewController;
 import debugger.view.RootLayoutController;
 import debugger.view.ThreadAreaController;
@@ -46,6 +47,7 @@ public class GUI extends Application {
 	private static BreakpointAreaController breakpointAreaController;
 	private static LocalVarAreaController localVarAreaController;
 	private static BytecodeAreaController bytecodeAreaController;
+	private static OutputAreaController outputAreaController;
 
 	//Breakpoint setting depends on this classpath
 	//these are the current configuration's sourcepath and classpath 
@@ -155,6 +157,7 @@ public class GUI extends Application {
 			breakpointAreaController = overviewController.getBreakpointAreaController();
 			localVarAreaController = overviewController.getLocalVarAreaController();
 			bytecodeAreaController = codeAreaController.getBytecodeAreaController();
+			outputAreaController = overviewController.getOutputAreaController();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -208,6 +211,10 @@ public class GUI extends Application {
 
 	public static BytecodeAreaController getBytecodeAreaController() {
 		return bytecodeAreaController;
+	}
+	
+	public static OutputAreaController getOutputAreaController() {
+		return outputAreaController;
 	}
 
 	public static StringProperty getSourcepath() {
