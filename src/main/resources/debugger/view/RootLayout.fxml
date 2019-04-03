@@ -28,6 +28,11 @@
                       <MenuItem fx:id="configurationsMenuItem" mnemonicParsing="false" onAction="#handleConfigurations" text="Configurations" />
                     </items>
                   </Menu>
+                  <Menu mnemonicParsing="false" text="Help">
+                    <items>
+                      <MenuItem fx:id="informationMenuItem" mnemonicParsing="false" onAction="#handleInformation" text="Information" />
+                    </items>
+                  </Menu>
               </menus>
             </MenuBar>
             <ToolBar>

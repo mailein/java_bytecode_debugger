@@ -15,18 +15,25 @@ import debugger.Debugger;
 import debugger.GUI;
 import debugger.Main;
 import debugger.dataType.Configuration;
+import debugger.misc.BytecodePrefix;
 import debugger.misc.SourceClassConversion;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -48,6 +55,8 @@ public class RootLayoutController {
 	private MenuItem saveAsMenuItem;
 	@FXML
 	private MenuItem configurationsMenuItem;
+	@FXML
+	private MenuItem informationMenuItem;
 	@FXML
 	private Button newButton;
 	@FXML
@@ -347,6 +356,42 @@ public class RootLayoutController {
 		stage.show();
 	}
 
+	@FXML
+	private void handleInformation() {
+		Label label = new Label("For more infomation:\n"
+				+ "https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings\n"
+				+ "Java Virtual Machine Specification Chapter 6");
+		
+		TableView<BytecodePrefix> table = new TableView<>();
+		TableColumn<BytecodePrefix, String> prefixCol = new TableColumn<>("Prefix/suffix");
+		prefixCol.setCellValueFactory(new PropertyValueFactory<>("prefix"));
+		prefixCol.setMinWidth(50);
+		TableColumn<BytecodePrefix, String> operandTypeCol = new TableColumn<>("Operand type");
+		operandTypeCol.setCellValueFactory(new PropertyValueFactory<>("operandType"));
+		operandTypeCol.setMinWidth(50);
+		table.setItems(FXCollections.observableList(BytecodePrefix.getData()));
+		table.setPrefHeight(220);
+		table.getColumns().addAll(prefixCol, operandTypeCol);
+		
+		Label example = new Label("Instructions fall into a number of broad groups:\n" +
+				"Load and store (e.g. aload_0, istore)\n" + 
+				"Arithmetic and logic (e.g. ladd, fcmpl)\n" + 
+				"Type conversion (e.g. i2b, d2i)\n" + 
+				"Object creation and manipulation (new, putfield)\n" + 
+				"Operand stack management (e.g. swap, dup2)\n" + 
+				"Control transfer (e.g. ifeq, goto)\n" + 
+				"Method invocation and return (e.g. invokespecial, areturn)");
+		
+		VBox vbox = new VBox(5.0, label, table, example);
+		vbox.setPadding(new Insets(5.0));
+		ScrollPane scrollPane = new ScrollPane(vbox);
+		Scene scene = new Scene(scrollPane);
+		Stage stage = new Stage();
+		stage.setScene(scene);
+		stage.initModality(Modality.APPLICATION_MODAL);
+		stage.show();
+	}
+	
 	private enum textAreaType {
 		mainClass, progArg, sourcepath, classpath
 	};
