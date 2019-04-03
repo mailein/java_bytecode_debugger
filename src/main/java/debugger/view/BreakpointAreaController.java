@@ -29,6 +29,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -54,15 +55,37 @@ public class BreakpointAreaController {
 		lineNumberCol.setCellValueFactory(new PropertyValueFactory<>("lineNumberString"));
 		lineNumberCol.setMinWidth(20);
 
+		TableColumn<LineBreakpoint, String> hitCountCol = new TableColumn<>("Set Hit Count");
+		hitCountCol.setCellValueFactory(new PropertyValueFactory<>("hitCount"));
+		hitCountCol.setMinWidth(20);
+		hitCountCol.setCellFactory(TextFieldTableCell.forTableColumn());
+		hitCountCol.setOnEditCommit(e -> {
+			LineBreakpoint linebp = table.getItems().get(e.getTablePosition().getRow());
+			String hitCountString = e.getNewValue();
+			linebp.setHitCount(hitCountString);
+			BreakpointRequest bpReq = linebp.getBreakpointRequest();
+			if (bpReq != null && !hitCountString.isEmpty()) {
+				bpReq.disable();//because can't change enabled request 
+				try {
+					int count = Integer.parseUnsignedInt(hitCountString);
+					bpReq.addCountFilter(count);
+				} catch (NumberFormatException exception) {
+					// no count filter
+				}
+				bpReq.enable();
+			}
+		});
+
 		table.setItems(breakpoints);
-		table.getColumns().addAll(classNameCol, lineNumberCol);
+		table.setEditable(true);// so that hitCountCol can be editable
+		table.getColumns().addAll(classNameCol, lineNumberCol, hitCountCol);
 
 		HBox hbox = new HBox(5.0, tableLabel, removeButton, removeAllButton);
 		hbox.setAlignment(Pos.CENTER_LEFT);
 
 		vbox.getChildren().addAll(hbox, table);
 
-		//TODO after remove breakpoint, the blue dot doesn't disappear
+		// TODO after remove breakpoint, the blue dot doesn't disappear
 		removeButton.setOnAction(e -> {
 			breakpoints.remove(table.getSelectionModel().getSelectedItem());
 			CodeAreaController codeAreaController = GUI.getCodeAreaController();
@@ -154,6 +177,7 @@ public class BreakpointAreaController {
 			BreakpointRequest breakpointRequest = eventReqMgr.createBreakpointRequest(loc);
 			breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 			breakpointRequest.enable();
+			linebp.setBreakpointRequest(breakpointRequest);
 			int lineNumber = linebp.getLineNumber();
 			System.out.println("added Breakpoint to debugger for " + refType + " at line: " + lineNumber);
 			// update linebp

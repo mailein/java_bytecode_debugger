@@ -442,7 +442,17 @@ public class Debugger implements Runnable {
 			// request
 			BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(loc);
 			bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+			// for the situation: set hitCount BEFORE debuggers launch
+			if(!nRmLinebp.getHitCount().isEmpty()) {
+				try {
+					int count = Integer.parseUnsignedInt(nRmLinebp.getHitCount());
+					bpReq.addCountFilter(count);
+				} catch (NumberFormatException exception) {
+					//no count filter
+				}
+			}
 			bpReq.enable();
+			nRmLinebp.setBreakpointRequest(bpReq);
 			System.out.println(
 					"added breakpoint in classRefType " + classRefType + " at line " + nRmLinebp.getLineNumber());
 			// update nRmlinebp

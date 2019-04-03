@@ -5,18 +5,22 @@ import java.nio.file.Paths;
 
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
+import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.EventRequestManager;
 
 import debugger.GUI;
 import debugger.misc.SourceClassConversion;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 
 public class LineBreakpoint extends Breakpoint {
 	private String sourceName;
 	private String methodSignature;
+	private BreakpointRequest breakpointRequest;
 	
 	private SimpleStringProperty fileNameString;
 	private SimpleStringProperty lineNumberString;
+	private SimpleStringProperty hitCount;
 	
 	public LineBreakpoint(String fileSourcepath, int lineNumber) {
 		super(fileSourcepath, lineNumber);
@@ -24,6 +28,7 @@ public class LineBreakpoint extends Breakpoint {
 		tmp = tmp.substring(tmp.lastIndexOf(File.separatorChar) + 1);
 		fileNameString = new SimpleStringProperty(tmp);
 		lineNumberString = new SimpleStringProperty(String.valueOf(lineNumber));
+		hitCount = new SimpleStringProperty("");
 	}
 
 	/**
@@ -52,6 +57,14 @@ public class LineBreakpoint extends Breakpoint {
 		return methodSignature;
 	}
 	
+	public BreakpointRequest getBreakpointRequest() {
+		return breakpointRequest;
+	}
+	
+	public void setBreakpointRequest(BreakpointRequest bpRequest) {
+		this.breakpointRequest = bpRequest;
+	}
+	
 	public SimpleStringProperty fileNameString() {
 		return fileNameString;
 	}
@@ -74,5 +87,17 @@ public class LineBreakpoint extends Breakpoint {
 	
 	public void setLineNumberString(String line) {
 		lineNumberString.set(line);
+	}
+
+	public SimpleStringProperty hitCount() {
+		return hitCount;
+	}
+	
+	public String getHitCount() {
+		return hitCount.get();
+	}
+	
+	public void setHitCount(String count) {
+		hitCount.set(count);
 	}
 }
