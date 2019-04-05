@@ -1,0 +1,29 @@
+stages:
+  - build
+  - bundle
+
+image: gradle:jdk11
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  GRADLE_USER_HOME: "${CI_PROJECT_DIR}/gradle_home"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+classes:
+  stage: build
+  dependencies: []
+  script:
+    - gradle classes
+
+jar:
+  stage: bundle
+  dependencies:
+    - classes
+  script:
+    - gradle jar
+  after_script:
+    - cp build/libs/debuggerGradle.jar .
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+      - debuggerGradle.jar
