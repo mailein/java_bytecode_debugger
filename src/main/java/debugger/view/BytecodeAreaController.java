@@ -72,11 +72,14 @@ public class BytecodeAreaController {
 	class LineRangeFactory implements IntFunction<Node> {
 		@Override
 		public Node apply(int value) {
-			Rectangle square = new Rectangle(10.0, 10.0);
-			square.setFill(Color.ORANGE);
+			Label label = new Label();
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));//see no words when scroll right
+			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+			Rectangle square = new Rectangle(10.0, 10.0, Color.ORANGE);
+			label.setGraphic(square);
 			if (!fileIndices.contains(value))
 				square.setVisible(false);
-			return square;
+			return label;
 		}
 	}
 

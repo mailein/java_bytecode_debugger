@@ -87,7 +87,7 @@ public class CodeAreaController {
 			Circle circle = new Circle(5.0, Color.BLUE);
 			circle.setVisible(false);
 			Label label = new Label();
-			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));//see no words when scroll right
 			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
