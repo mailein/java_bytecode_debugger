@@ -1,13 +1,11 @@
 package debugger;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -21,12 +19,9 @@ import java.util.Map;
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
 import com.sun.jdi.Field;
-import com.sun.jdi.IncompatibleThreadStateException;
-import com.sun.jdi.LocalVariable;
 import com.sun.jdi.Location;
 import com.sun.jdi.Method;
 import com.sun.jdi.ReferenceType;
-import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
 import com.sun.jdi.Value;
 import com.sun.jdi.VirtualMachine;
@@ -69,7 +64,6 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
-import javafx.scene.control.TextArea;
 
 public class Debugger implements Runnable {
 
@@ -84,7 +78,7 @@ public class Debugger implements Runnable {
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
-	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
+//	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// thread: actually no need, because global
 																		// variables
@@ -235,7 +229,7 @@ public class Debugger implements Runnable {
 			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 
-				System.out.println(className + "::::::::" + classRefType.methods());
+				System.out.println("--------\nClassPrepareEvent\nclassName: " + className + "\nmethods: " + classRefType.methods());
 
 				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
@@ -284,7 +278,7 @@ public class Debugger implements Runnable {
 			long bci = location.codeIndex();
 			Method method = location.method();
 			if (lineNumber == -1 || bci == -1) {
-				System.out.println("Problem: stepi into a native method.");
+				System.out.println("Problem: step into a native method.");
 				return;
 			}
 			ReferenceType classRefType = method.declaringType();
@@ -413,7 +407,7 @@ public class Debugger implements Runnable {
 			}
 		}
 		matchingLinebp.forEach((b, l) -> {
-			System.out.println("matching Line breakpoint at line: " + b.getLineNumber());
+			System.out.println("matching LineBreakpoint at line: " + b.getLineNumber());
 		});
 
 		// 2. if !className.isEmpty() && matches normal className or anonymous
@@ -471,39 +465,39 @@ public class Debugger implements Runnable {
 		});
 	}
 
-	private void printHistoryEntries(String name) {
-		List<HistoryRecord> history = VarTable.get(name);
-		if (history != null) {
-			System.out.println("History for " + name + ":");
-			for (HistoryRecord record : history) {
-				System.out.println("|" + record.toString());
-			}
-			System.out.println("|_");
-		} else {
-			System.out.println("Error. No watchpoint set for " + name);
-		}
-	}
-
-	private List<StackFrame> getStackFrames(ThreadReference thread) {
-		try {
-			List<StackFrame> stackFrames = thread.frames();
-			return stackFrames;
-		} catch (IncompatibleThreadStateException e) {// if the thread is not suspended in the target VM
-			return null;
-		}
-	}
-
-	private List<LocalVariable> getLocalVar(StackFrame stackFrame) {
-//		StackFrame stackFrame = thread.frame(0);//TODO when to check local variables
-		try {
-			List<LocalVariable> localVariables = stackFrame.visibleVariables();
-			return localVariables;
-//			localVariables.forEach(var -> Value value = stackFrame.getValue(var));
-//		int breakpointLoop = ((IntegerValue) breakpointValueLoop).intValue();
-		} catch (AbsentInformationException e) {
-			return null;
-		}
-	}
+//	private void printHistoryEntries(String name) {
+//		List<HistoryRecord> history = VarTable.get(name);
+//		if (history != null) {
+//			System.out.println("History for " + name + ":");
+//			for (HistoryRecord record : history) {
+//				System.out.println("|" + record.toString());
+//			}
+//			System.out.println("|_");
+//		} else {
+//			System.out.println("Error. No watchpoint set for " + name);
+//		}
+//	}
+//
+//	private List<StackFrame> getStackFrames(ThreadReference thread) {
+//		try {
+//			List<StackFrame> stackFrames = thread.frames();
+//			return stackFrames;
+//		} catch (IncompatibleThreadStateException e) {// if the thread is not suspended in the target VM
+//			return null;
+//		}
+//	}
+//
+//	private List<LocalVariable> getLocalVar(StackFrame stackFrame) {
+////		StackFrame stackFrame = thread.frame(0);//TODO when to check local variables
+//		try {
+//			List<LocalVariable> localVariables = stackFrame.visibleVariables();
+//			return localVariables;
+////			localVariables.forEach(var -> Value value = stackFrame.getValue(var));
+////		int breakpointLoop = ((IntegerValue) breakpointValueLoop).intValue();
+//		} catch (AbsentInformationException e) {
+//			return null;
+//		}
+//	}
 
 	public String name() {
 		return mainClassName;
