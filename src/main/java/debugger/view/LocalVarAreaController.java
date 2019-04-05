@@ -58,13 +58,14 @@ public class LocalVarAreaController {
 				List<LocalVariable> locals = null;
 				try {
 					locals = currFrame.visibleVariables();
+					locals.forEach(local -> {
+						Value value = currFrame.getValue(local);
+						localVars.add(new LocalVar(local.name(), value.toString()));
+					});
 				} catch (AbsentInformationException e) {
-					e.printStackTrace();
+					System.out.println("It's alright, there is no local variable information for this method.");
+//					e.printStackTrace();
 				}
-				locals.forEach(local -> {
-					Value value = currFrame.getValue(local);
-					localVars.add(new LocalVar(local.name(), value.toString()));
-				});
 			}
 		} catch (IncompatibleThreadStateException e) {
 			e.printStackTrace();

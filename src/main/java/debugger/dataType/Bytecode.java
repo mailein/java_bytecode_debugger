@@ -153,6 +153,8 @@ public class Bytecode {// fileIndex starts with 1
 		}
 
 		private boolean parseOneTableLine(String oneTableLine) {
+			if(oneTableLine.isEmpty())
+				return false;
 			String lineString = oneTableLine.substring(oneTableLine.indexOf("line") + 4, oneTableLine.indexOf(":"));
 			String bciString = oneTableLine.substring(oneTableLine.indexOf(":") + 1);
 			try {
