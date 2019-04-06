@@ -51,13 +51,6 @@ public class BytecodeAreaController {
 
 	@FXML
 	private void initialize() {
-		this.anchorPane.setOnMouseEntered(e -> halfWidthOfCodeArea());
-		this.anchorPane.setOnMouseExited(e -> {
-			this.anchorPane.prefWidthProperty().unbind();
-			this.anchorPane.setPrefWidth(25);
-		});
-		this.anchorPane.setBorder(
-				new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(1))));
 		bytecodeArea.setEditable(false);
 		VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(bytecodeArea);
 		this.anchorPane.getChildren().add(scrollPane);
@@ -65,8 +58,6 @@ public class BytecodeAreaController {
 		AnchorPane.setLeftAnchor(scrollPane, 0.0);
 		AnchorPane.setRightAnchor(scrollPane, 0.0);
 		AnchorPane.setTopAnchor(scrollPane, 0.0);
-
-		this.anchorPane.setManaged(false);
 	}
 
 	class LineRangeFactory implements IntFunction<Node> {
@@ -105,7 +96,8 @@ public class BytecodeAreaController {
 		} catch (NoSuchElementException e) {
 			content = "";
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			System.out.println("It's alright, no corresponding bytecode means this class file is not in the project.");
+//			e.printStackTrace();
 		}
 		bytecodeArea.replaceText(content);
 
@@ -155,18 +147,4 @@ public class BytecodeAreaController {
 		};
 		bytecodeArea.setParagraphGraphicFactory(graphicFactory);
 	}
-
-	public void setBytecodeAreaVisible(boolean visible) {
-		halfWidthOfCodeArea();
-		this.anchorPane.setManaged(visible);
-		// don't why, but must have setVisible, set managed alone can't make
-		// bytecodeArea disappear
-		this.anchorPane.setVisible(visible);
-	}
-
-	private void halfWidthOfCodeArea() {
-		this.anchorPane.prefWidthProperty()
-				.bind(GUI.getCodeAreaController().getAnchorPanePrefWidthProperty().divide(2.0));
-	}
-
 }

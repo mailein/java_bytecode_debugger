@@ -17,7 +17,12 @@
             </SplitPane>
             <SplitPane dividerPositions="0.7073578595317725" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
               <items>
-                <AnchorPane fx:id="codeArea" minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0" />
+                  <SplitPane dividerPositions="0.5" prefHeight="200.0" prefWidth="200.0">
+                     <items>
+                      <AnchorPane fx:id="codeArea" minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0" />
+                        <AnchorPane fx:id="bytecodeArea" prefHeight="200.0" prefWidth="200.0" />
+                     </items>
+                  </SplitPane>
                 <AnchorPane fx:id="outputArea" minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0" />
               </items>
             </SplitPane>

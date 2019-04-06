@@ -9,8 +9,6 @@ import javafx.scene.layout.AnchorPane;
 
 public class OverviewController {
 	@FXML
-	private AnchorPane codeArea;
-	@FXML
 	private AnchorPane threadArea;
 	@FXML
 	private AnchorPane watchpointArea;
@@ -19,13 +17,18 @@ public class OverviewController {
 	@FXML
 	private AnchorPane localVarArea;
 	@FXML
+	private AnchorPane codeArea;
+	@FXML
+	private AnchorPane bytecodeArea;
+	@FXML
 	private AnchorPane outputArea;
 
-	private CodeAreaController codeAreaController;
 	private ThreadAreaController threadAreaController;
 	private WatchpointAreaController watchpointAreaController;
 	private BreakpointAreaController breakpointAreaController;
 	private LocalVarAreaController localVarAreaController;
+	private CodeAreaController codeAreaController;
+	private BytecodeAreaController bytecodeAreaController;
 	private OutputAreaController outputAreaController;
 
 	@FXML
@@ -40,6 +43,8 @@ public class OverviewController {
 				0.0, 0.0, 0.0, 0.0);
 		this.codeAreaController = (CodeAreaController) initArea("view/CodeArea.fxml", this.codeArea, 0.0, 0.0, 0.0,
 				0.0);
+		this.bytecodeAreaController = (BytecodeAreaController) initArea("view/BytecodeArea.fxml", this.bytecodeArea,
+				0.0, 0.0, 0.0, 0.0);
 		this.outputAreaController = (OutputAreaController) initArea("view/OutputArea.fxml", this.outputArea, 0.0, 0.0,
 				0.0, 0.0);
 	}
@@ -69,10 +74,6 @@ public class OverviewController {
 		AnchorPane.setRightAnchor(son, right);
 	}
 
-	public CodeAreaController getCodeAreaController() {
-		return this.codeAreaController;
-	}
-
 	public ThreadAreaController getThreadAreaController() {
 		return threadAreaController;
 	}
@@ -88,6 +89,15 @@ public class OverviewController {
 	public LocalVarAreaController getLocalVarAreaController() {
 		return localVarAreaController;
 	}
+
+	public CodeAreaController getCodeAreaController() {
+		return this.codeAreaController;
+	}
+
+	public BytecodeAreaController getBytecodeAreaController() {
+		return this.bytecodeAreaController;
+	}
+
 	public OutputAreaController getOutputAreaController() {
 		return outputAreaController;
 	}

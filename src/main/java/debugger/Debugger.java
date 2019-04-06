@@ -154,7 +154,7 @@ public class Debugger implements Runnable {
 			@Override
 			public void write(int b) throws IOException {
 				Platform.runLater(() -> {
-					byte[] bb = {(byte)(b & 0xff)};
+					byte[] bb = { (byte) (b & 0xff) };
 					GUI.getOutputAreaController().append(new String(bb, StandardCharsets.UTF_8));
 				});
 			}
@@ -166,7 +166,6 @@ public class Debugger implements Runnable {
 		errThread.setDaemon(true);
 		errThread.start();
 
-		
 		eventRequestManager = vm.eventRequestManager();
 
 		ClassPrepareRequest classPrepareRequest = eventRequestManager.createClassPrepareRequest();
@@ -180,7 +179,7 @@ public class Debugger implements Runnable {
 		threadStartRequest.enable();
 
 //		if (debugMode) {//no output after hitting Button "Run", if debugMode is false
-			eventLoop();
+		eventLoop();
 //		}
 
 		process.destroy();
@@ -229,7 +228,8 @@ public class Debugger implements Runnable {
 			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 
-				System.out.println("--------\nClassPrepareEvent\nclassName: " + className + "\nmethods: " + classRefType.methods());
+				System.out.println("--------\nClassPrepareEvent\nclassName: " + className + "\nmethods: "
+						+ classRefType.methods());
 
 				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
@@ -256,8 +256,17 @@ public class Debugger implements Runnable {
 			if (classRefType == null) {
 				return;
 			}
-			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: " + lineNumber
-					+ "\n|bci: " + bci + "\n|_");
+			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
+					+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
+
+			// finds also anonymous class
+			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
+			if (!fileClasspath.isEmpty()) {
+				BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
+				Platform.runLater(() -> {
+					bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
+				});
+			}
 
 			// for line indicator
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
@@ -285,25 +294,16 @@ public class Debugger implements Runnable {
 			if (classRefType == null) {
 				return;
 			}
-			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: " + lineNumber
-					+ "\n|bci: " + bci + "\n|_");
+			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: "
+					+ lineNumber + "\n|bci: " + bci + "\n|_");
 
-			StepRequest req = (StepRequest) stepEvent.request();
-			if (req.size() == StepRequest.STEP_MIN) {// stepi
-				System.out.println("method arg: " + method.argumentTypeNames() + ", name: " + method.name());
-				String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);//finds also anonymous class
-				System.out.println("fileClasspath: " + fileClasspath);
-				if(!fileClasspath.isEmpty()) {
-					BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
-					Platform.runLater(() -> {
-						bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
-						bytecodeAreaController.setBytecodeAreaVisible(true);
-					});
-				}
-			}else {
-//				Platform.runLater(() -> {
-					GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
-//				});
+			// finds also anonymous class
+			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
+			if (!fileClasspath.isEmpty()) {
+				BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
+				Platform.runLater(() -> {
+					bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
+				});
 			}
 
 			// for line indicator
@@ -437,12 +437,12 @@ public class Debugger implements Runnable {
 			BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(loc);
 			bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 			// for the situation: set hitCount BEFORE debuggers launch
-			if(!nRmLinebp.getHitCount().isEmpty()) {
+			if (!nRmLinebp.getHitCount().isEmpty()) {
 				try {
 					int count = Integer.parseUnsignedInt(nRmLinebp.getHitCount());
 					bpReq.addCountFilter(count);
 				} catch (NumberFormatException exception) {
-					//no count filter
+					// no count filter
 				}
 			}
 			bpReq.enable();

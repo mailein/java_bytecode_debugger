@@ -492,18 +492,12 @@ public class RootLayoutController {
 
 	@FXML
 	private void handleResume() {// TODO why it doesn't work after suspend thread
-		// when not stepi, hide bytecodeArea
-		GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
-
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.resume();
 	}
 
 	@FXML
 	private void handleTerminate() {
-		// when not stepi, hide bytecodeArea
-		GUI.getBytecodeAreaController().setBytecodeAreaVisible(false);
-
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		currentDebugger.terminate();
 	}
