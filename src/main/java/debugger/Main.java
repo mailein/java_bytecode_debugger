@@ -18,6 +18,7 @@ public class Main {
 		newDebugger.addListener((obs, ov, nv) -> {
 			if(nv) {
 				newDebug();
+				newDebugger.set(false);
 			}
 		});
 		Application.launch(debugger.GUI.class);
