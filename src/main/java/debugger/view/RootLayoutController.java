@@ -345,6 +345,7 @@ public class RootLayoutController {
 
 		Scene scene = new Scene(splitPane);
 		Stage stage = new Stage();
+		stage.setTitle("Set configurations");
 		stage.setScene(scene);
 		stage.initModality(Modality.APPLICATION_MODAL);
 		stage.setOnCloseRequest(e -> {

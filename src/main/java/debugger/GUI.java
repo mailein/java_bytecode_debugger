@@ -132,7 +132,7 @@ public class GUI extends Application {
 
 		Scene scene = new Scene(vbox, 500.0, 200.0);
 		Stage stage = new Stage();
-		stage.setTitle("Setting paths");
+		stage.setTitle("Set paths");
 		stage.setScene(scene);
 		stage.initModality(Modality.APPLICATION_MODAL);
 

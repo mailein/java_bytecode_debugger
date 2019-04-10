@@ -90,6 +90,7 @@ public class CodeAreaController {
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
+				selectedCodeArea.deselect();
 				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
 					toggleLineBreakpoint(lineNumber, circle);
 			});
@@ -238,6 +239,7 @@ public class CodeAreaController {
 			Node indicator = lineIndicatorFactory.apply(line);
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
+				selectedCodeArea.deselect();
 				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
 					toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
 			});
