@@ -228,8 +228,8 @@ public class Debugger implements Runnable {
 			if (Files.exists(fileClasspath, LinkOption.NOFOLLOW_LINKS)) {
 				classes.put(className, classRefType);
 
-				System.out.println("--------\nClassPrepareEvent\nclassName: " + className + "\nmethods: "
-						+ classRefType.methods());
+				System.out.println("--------\nClassPrepareEvent\nclassName: " + className 
+						+ "\nmethods: "	+ classRefType.methods());
 
 				// breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);

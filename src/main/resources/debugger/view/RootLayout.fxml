@@ -41,6 +41,7 @@
                   <Button fx:id="openButton" mnemonicParsing="false" onAction="#handleOpen" text="Open" />
                   <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSave" text="Save" />
                   <Separator orientation="VERTICAL" />
+                  <Button fx:id="compileButton" mnemonicParsing="false" onAction="#handleCompile" text="Compile" />
                   <Button fx:id="runButton" mnemonicParsing="false" onAction="#handleRun" text="Run" />
                   <Button fx:id="debugButton" mnemonicParsing="false" onAction="#handleDebug" text="Debug" />
                   <Separator orientation="VERTICAL" />

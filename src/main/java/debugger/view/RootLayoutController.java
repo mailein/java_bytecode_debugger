@@ -1,11 +1,10 @@
 package debugger.view;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 
-import com.sun.jdi.IncompatibleThreadStateException;
-import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
@@ -22,8 +21,11 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
@@ -71,6 +73,8 @@ public class RootLayoutController {
 	private Button stepOverButton;
 	@FXML
 	private Button stepReturnButton;
+	@FXML
+	private Button compileButton;
 	@FXML
 	private Button runButton;
 	@FXML
@@ -279,8 +283,13 @@ public class RootLayoutController {
 			if (conf == null) {
 				conf = new Configuration();
 			}
-			GUI.getConfigurations().put(configName, conf.setMainClass(mainClass).setProgArg(progArg)
-					.setSourcepath(sourcepath).setClasspath(classpath).setConfigName(configName).setShown(true));
+			GUI.getConfigurations().put(configName, conf
+					.setMainClass(mainClass)
+					.setProgArg(progArg)
+					.setSourcepath(sourcepath)
+					.setClasspath(classpath)
+					.setConfigName(configName)
+					.setShown(true));
 			System.out.println("NEW -- write " + configName + " to GUI: " + mainClass + ", " + progArg + ", "
 					+ sourcepath + ", " + classpath + ", " + "true");
 		}
@@ -298,24 +307,37 @@ public class RootLayoutController {
 		// splitPane right
 		Label mainClassLabel = new Label("main class:");
 		TextArea mainClassTextArea = new TextArea();
-		mainClassTextArea.setPromptText("main class name(incl. package name)");
+		mainClassTextArea.setPromptText(
+				"If empty, the selected tab must contain main method, "
+						+ "otherwise eg. dir.Main if file path is sourcepath/dir/Main.java.");
 		Label programArgLabel = new Label("program arguments:");
 		TextArea programArgTextArea = new TextArea();
 		programArgTextArea.setPromptText("args for debuggee's main method");
 		Label sourcepathLabel = new Label("sourcepath:");
 		TextArea sourcepathTextArea = new TextArea();
-		sourcepathTextArea.setPromptText("Default: the path of debugger's jar file");
+		sourcepathTextArea.setPromptText("If empty, same as the input at debugger launch.");
 		Label classpathLabel = new Label("classpath:");
 		TextArea classpathTextArea = new TextArea();
-		classpathTextArea.setPromptText("Default: the path of debugger's jar file");
+		classpathTextArea.setPromptText("If empty, same as the input at debugger launch.");
+		// Update path for "compile"&"run"&"debug", so run and debug buttons in
+		// buttonbar will read same path
+		Button compile = new Button("compile");
+		compile.setOnAction(e -> {
+			updateGUIpath(sourcepathTextArea, classpathTextArea);
+			handleCompile();
+		});
 		Button run = new Button("Run");
-		run.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), sourcepathTextArea.getText(),
-				classpathTextArea.getText(), false));
+		run.setOnAction(event -> {
+			updateGUIpath(sourcepathTextArea, classpathTextArea);
+			handleRunOrDebug(mainClassTextArea.getText(), "", "", false);
+		});
 		Button debug = new Button("Debug");
-		debug.setOnAction(event -> handleRunOrDebug(mainClassTextArea.getText(), sourcepathTextArea.getText(),
-				classpathTextArea.getText(), true));
+		debug.setOnAction(event -> {
+			updateGUIpath(sourcepathTextArea, classpathTextArea);
+			handleRunOrDebug(mainClassTextArea.getText(), "", "", true);
+		});
 		ButtonBar buttonbar = new ButtonBar();
-		buttonbar.getButtons().addAll(run, debug);
+		buttonbar.getButtons().addAll(compile, run, debug);
 		VBox right = new VBox(5.0, mainClassLabel, mainClassTextArea, programArgLabel, programArgTextArea,
 				sourcepathLabel, sourcepathTextArea, classpathLabel, classpathTextArea, buttonbar);
 		right.setPrefSize(400, 150);
@@ -357,12 +379,48 @@ public class RootLayoutController {
 		stage.show();
 	}
 
+	// pseuco*.jar must be under sourcepath
+	// TODO no need for classpath(same as sourcepath)
+	@FXML
+	private void handleCompile() {
+		ProcessBuilder processBuilder = new ProcessBuilder();
+		String cmd = "cd \'" + GUI.getSourcepath().get() + "\';" // go to dir of sourcepath
+				+ "javac -cp pseuco*.jar */*.java;" // get *.class
+				+ "for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done\n"; // get
+																												// *.bytecode
+		processBuilder.command("bash", "-c", cmd);
+		try {
+			Process process = processBuilder.start();
+			int exitVal = process.waitFor();
+			if (exitVal == 0) {// TODO pop out a window
+				Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
+				success.showAndWait();
+			} else {
+				Alert failure = new Alert(AlertType.INFORMATION, "Failure", ButtonType.CLOSE);
+				failure.showAndWait();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void updateGUIpath(TextArea sourcepathTextArea, TextArea classpathTextArea) {
+		String sourcepath = sourcepathTextArea.getText();
+		if (!sourcepath.isEmpty())
+			GUI.setSourcepath(sourcepath);
+		String classpath = classpathTextArea.getText();
+		if (!classpath.isEmpty())
+			GUI.setClasspath(classpath);
+	}
+
 	@FXML
 	private void handleInformation() {
 		Label label = new Label("For more infomation:\n"
 				+ "https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings\n"
 				+ "Java Virtual Machine Specification Chapter 6");
-		
+
 		TableView<BytecodePrefix> table = new TableView<>();
 		TableColumn<BytecodePrefix, String> prefixCol = new TableColumn<>("Prefix/suffix");
 		prefixCol.setCellValueFactory(new PropertyValueFactory<>("prefix"));
@@ -373,16 +431,16 @@ public class RootLayoutController {
 		table.setItems(FXCollections.observableList(BytecodePrefix.getData()));
 		table.setPrefHeight(220);
 		table.getColumns().addAll(prefixCol, operandTypeCol);
-		
-		Label example = new Label("Instructions fall into a number of broad groups:\n" +
-				"Load and store (e.g. aload_0, istore)\n" + 
-				"Arithmetic and logic (e.g. ladd, fcmpl)\n" + 
-				"Type conversion (e.g. i2b, d2i)\n" + 
-				"Object creation and manipulation (new, putfield)\n" + 
-				"Operand stack management (e.g. swap, dup2)\n" + 
-				"Control transfer (e.g. ifeq, goto)\n" + 
-				"Method invocation and return (e.g. invokespecial, areturn)");
-		
+
+		Label example = new Label("Instructions fall into a number of broad groups:\n"
+				+ "Load and store (e.g. aload_0, istore)\n"
+				+ "Arithmetic and logic (e.g. ladd, fcmpl)\n"
+				+ "Type conversion (e.g. i2b, d2i)\n"
+				+ "Object creation and manipulation (new, putfield)\n"
+				+ "Operand stack management (e.g. swap, dup2)\n"
+				+ "Control transfer (e.g. ifeq, goto)\n"
+				+ "Method invocation and return (e.g. invokespecial, areturn)");
+
 		VBox vbox = new VBox(5.0, label, table, example);
 		vbox.setPadding(new Insets(5.0));
 		ScrollPane scrollPane = new ScrollPane(vbox);
@@ -392,7 +450,7 @@ public class RootLayoutController {
 		stage.initModality(Modality.APPLICATION_MODAL);
 		stage.show();
 	}
-	
+
 	private enum textAreaType {
 		mainClass, progArg, sourcepath, classpath
 	};
@@ -463,14 +521,9 @@ public class RootLayoutController {
 				GUI.setClasspath(classpath);
 			}
 			if (mainClass.isEmpty()) {
-				File file = codeAreaController.getFileOfSelectedTab();
-				if (file == null || !file.isFile())
+				mainClass = extractMainClass(sourcepath);
+				if (mainClass.isEmpty())
 					return;
-				// parameters
-				String fileSourcepath = file.getCanonicalPath();
-				System.out.println("root fileSourcepath: " + fileSourcepath);
-				mainClass = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath),
-						Paths.get(fileSourcepath));
 			}
 			System.out.println(
 					"root mainclass: " + mainClass + ", sourcepath: " + sourcepath + ", classpath: " + classpath);
@@ -489,6 +542,25 @@ public class RootLayoutController {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	private String extractMainClass(String sourcepath) {
+		File file = codeAreaController.getFileOfSelectedTab();
+		if (file == null || !file.isFile()) {
+			System.out.println("I'm assuming selected tab's file has main method. But file error.");
+			return "";
+		}
+		// parameters
+		String fileSourcepath = "";
+		try {
+			fileSourcepath = file.getCanonicalPath();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		System.out.println("root fileSourcepath: " + fileSourcepath);
+		String mainClass = SourceClassConversion.mapFileSourcepath2ClassName(Paths.get(sourcepath),
+				Paths.get(fileSourcepath));
+		return mainClass;
 	}
 
 	@FXML
