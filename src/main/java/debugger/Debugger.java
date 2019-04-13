@@ -231,10 +231,10 @@ public class Debugger implements Runnable {
 				System.out.println("--------\nClassPrepareEvent\nclassName: " + className 
 						+ "\nmethods: "	+ classRefType.methods());
 
-				// breakpoints
+				// request breakpoints
 				addSetLineBreakpointsToDebugger(classRefType, className);
 
-				// watchpoints
+				// request watchpoints
 				requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
 			}
 			eventSet.resume();
@@ -272,6 +272,8 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
+			// request watchpoints
+			requestWatchpoints(classRefType);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, breakpointEvent);
 			GUI.getWatchpointAreaController().evalAll();
@@ -311,6 +313,8 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
 			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
+			// request watchpoints
+			requestWatchpoints(classRefType);
 			// refresh watchpoint, localVar
 			this.currentEvent.put(thread, stepEvent);
 			GUI.getWatchpointAreaController().evalAll();
@@ -361,23 +365,26 @@ public class Debugger implements Runnable {
 		WatchpointAreaController wpController = GUI.getWatchpointAreaController();
 		ObservableList<Watchpoint> watchpoints = wpController.getWatchpoints();
 		watchpoints.forEach(wp -> {
-			String withoutFieldName = wp.stripOffFieldName();
-			String fieldName = wp.strip2fieldName();
-			if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
-					|| withoutFieldName.equals("")) {
-				Field field = refType.fieldByName(fieldName);
-				if (field != null) {
-					AccessWatchpointRequest accessRequest;
-					if (vm.canWatchFieldAccess()) {
-						accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
+			if(!wp.getRequested()) {
+				String withoutFieldName = wp.stripOffFieldName();
+				String fieldName = wp.strip2fieldName();
+				if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
+						|| withoutFieldName.equals("")) {
+					Field field = refType.fieldByName(fieldName);
+					if (field != null) {
+						AccessWatchpointRequest accessRequest;
+						if (vm.canWatchFieldAccess()) {
+							accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
 //							accessRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-						accessRequest.enable();
-					}
-					ModificationWatchpointRequest modificationRequest;
-					if (vm.canWatchFieldModification()) {
-						modificationRequest = eventRequestManager.createModificationWatchpointRequest(field);
+							accessRequest.enable();
+						}
+						ModificationWatchpointRequest modificationRequest;
+						if (vm.canWatchFieldModification()) {
+							modificationRequest = eventRequestManager.createModificationWatchpointRequest(field);
 //							modificationRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
-						modificationRequest.enable();
+							modificationRequest.enable();
+						}
+						wp.setRequested(true);
 					}
 				}
 			}

@@ -528,7 +528,8 @@ public class RootLayoutController {
 			System.out.println(
 					"root mainclass: " + mainClass + ", sourcepath: " + sourcepath + ", classpath: " + classpath);
 			// create new configuration, add it to GUI's configurations
-			Configuration config = new Configuration().setConfigName(mainClass).setMainClass(mainClass).setProgArg("")
+			Configuration config = new Configuration()
+					.setConfigName(mainClass).setMainClass(mainClass).setProgArg("")
 					.setSourcepath(sourcepath).setClasspath(classpath).setShown(false);
 			GUI.getConfigurations().put(mainClass, config);
 

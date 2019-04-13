@@ -26,7 +26,8 @@ public class Watchpoint {// doesn't include local var
 	// field.name(): name, eg. "n"
 	private SimpleStringProperty name;// global variable, if local get it from localVarAreaController
 	private SimpleStringProperty value;
-
+	private boolean requested = false;
+	
 	private ObservableList<HistoryRecord> history = FXCollections.observableArrayList();
 
 	public Watchpoint(String name) {
@@ -112,6 +113,14 @@ public class Watchpoint {// doesn't include local var
 				}
 			}
 		}
+	}
+	
+	public boolean getRequested() {
+		return this.requested;
+	}
+	
+	public void setRequested(boolean b) {
+		this.requested = b;
 	}
 
 	@Override
