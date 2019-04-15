@@ -384,10 +384,10 @@ public class RootLayoutController {
 	@FXML
 	private void handleCompile() {
 		ProcessBuilder processBuilder = new ProcessBuilder();
-		String cmd = "cd \'" + GUI.getSourcepath().get() + "\';" // go to dir of sourcepath
-				+ "javac -cp pseuco*.jar */*.java;" // get *.class
-				+ "for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done\n"; // get
-																												// *.bytecode
+		String sourcepath = GUI.getSourcepath().get();
+		String cmd = "cd \'" + sourcepath + "\';"
+				+ "(javac -cp pseuco*.jar */*.java || exit 100);"
+				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
 		processBuilder.command("bash", "-c", cmd);
 		try {
 			Process process = processBuilder.start();
@@ -395,8 +395,14 @@ public class RootLayoutController {
 			if (exitVal == 0) {// TODO pop out a window
 				Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
 				success.showAndWait();
-			} else {
-				Alert failure = new Alert(AlertType.INFORMATION, "Failure", ButtonType.CLOSE);
+			} else if (exitVal == 1) {
+				Alert failure = new Alert(AlertType.INFORMATION,
+						"Failure for javac!\nMake sure you put pseuco*.jar on sourcepath AND sourcepath is path/to/parentFolder of <exportJavaFromPseuCoToThisFolder>",
+						ButtonType.CLOSE);
+				failure.showAndWait();
+			} else if (exitVal == 2) {
+				Alert failure = new Alert(AlertType.INFORMATION, "Failure for javap, but it's unlikely. Please contact developer.\n",
+						ButtonType.CLOSE);
 				failure.showAndWait();
 			}
 		} catch (IOException e) {
