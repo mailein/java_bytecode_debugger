@@ -308,8 +308,8 @@ public class RootLayoutController {
 		Label mainClassLabel = new Label("main class:");
 		TextArea mainClassTextArea = new TextArea();
 		mainClassTextArea.setPromptText(
-				"If empty, the selected tab must contain main method, "
-						+ "otherwise eg. dir.Main if file path is sourcepath/dir/Main.java.");
+				"If empty, the selected tab must contain main method, \n"
+						+ "otherwise enter eg. dir.Main if file path is sourcepath/dir/Main.java.");
 		Label programArgLabel = new Label("program arguments:");
 		TextArea programArgTextArea = new TextArea();
 		programArgTextArea.setPromptText("args for debuggee's main method");
@@ -340,7 +340,7 @@ public class RootLayoutController {
 		buttonbar.getButtons().addAll(compile, run, debug);
 		VBox right = new VBox(5.0, mainClassLabel, mainClassTextArea, programArgLabel, programArgTextArea,
 				sourcepathLabel, sourcepathTextArea, classpathLabel, classpathTextArea, buttonbar);
-		right.setPrefSize(400, 150);
+		right.setPrefSize(500, 200);
 
 		// splitPane left
 		VBox left = new VBox();
@@ -354,7 +354,7 @@ public class RootLayoutController {
 				sourcepathTextArea, classpathTextArea));
 		addNewConfig(left, mainClassTextArea, programArgTextArea, sourcepathTextArea, classpathTextArea, "", "", "",
 				"");
-		left.setPrefSize(50, 150);
+		left.setPrefSize(100, 200);
 
 		// add listener for textarea in right splitpane
 		textAreaAddListener(mainClassTextArea, textAreaType.mainClass);
@@ -386,7 +386,7 @@ public class RootLayoutController {
 		ProcessBuilder processBuilder = new ProcessBuilder();
 		String sourcepath = GUI.getSourcepath().get();
 		String cmd = "cd \'" + sourcepath + "\';"
-				+ "(javac -cp pseuco*.jar */*.java || exit 100);"
+				+ "(javac */Main.java || exit 100);"
 				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
 		processBuilder.command("bash", "-c", cmd);
 		try {
