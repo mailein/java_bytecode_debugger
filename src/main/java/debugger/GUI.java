@@ -57,13 +57,6 @@ public class GUI extends Application {
 //	private static ObservableMap<String, Configuration> configurations = FXCollections.observableHashMap();
 	private static Map<String, Configuration> configurations = new HashMap<>();// <configName, configuration>
 
-	public void main(String[] args) {
-		// String[] s = new String[0];
-		// It must be a public subclass of Application with a public no-argument
-		// constructor
-		launch(new String[0]);
-	}
-
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		this.primaryStage = primaryStage;

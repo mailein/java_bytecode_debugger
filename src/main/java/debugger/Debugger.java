@@ -19,6 +19,7 @@ import java.util.Map;
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
 import com.sun.jdi.Field;
+import com.sun.jdi.LocalVariable;
 import com.sun.jdi.Location;
 import com.sun.jdi.Method;
 import com.sun.jdi.ReferenceType;
@@ -178,14 +179,14 @@ public class Debugger implements Runnable {
 		threadStartRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 		threadStartRequest.enable();
 
-//		if (debugMode) {//no output after hitting Button "Run", if debugMode is false
-		eventLoop();
+//		if (debugMode) {//no output after hitting Button "Run" w/o eventLoop
+		eventLoop(debugMode);
 //		}
 
 		process.destroy();
 	}
 
-	private void eventLoop() throws Exception {
+	private void eventLoop(boolean debugMode) throws Exception {
 		eventQueue = vm.eventQueue();
 		while (!vmExit) {
 			eventSet = eventQueue.remove();
@@ -197,7 +198,7 @@ public class Debugger implements Runnable {
 					System.out.println("--------\n" + "VM disconnected or dead");
 					vmExit = true;
 				} else {
-					execute(event);
+					execute(event, debugMode);
 
 //					//TODO localVar
 //					List<ThreadReference> threads = mainThread.threadGroup().threads();
@@ -208,7 +209,7 @@ public class Debugger implements Runnable {
 		}
 	}
 
-	private void execute(Event event) throws Exception {
+	private void execute(Event event, boolean debugMode) throws Exception {
 		if (event instanceof VMStartEvent) {
 			mainThread = ((VMStartEvent) event).thread(); // get mainThread of targetVM
 			System.out.println("--------\nVMStartEvent");
@@ -245,7 +246,7 @@ public class Debugger implements Runnable {
 			classes.remove(className);
 			System.out.println("--------\n" + "className: " + className + " is unloaded.");
 			eventSet.resume();
-		} else if (event instanceof BreakpointEvent) {// switch thread, breakpointReq, stepiReq
+		} else if (event instanceof BreakpointEvent && debugMode) {// switch thread, breakpointReq, stepiReq
 			BreakpointEvent breakpointEvent = (BreakpointEvent) event;
 			ThreadReference thread = breakpointEvent.thread();
 			Location location = breakpointEvent.location();
@@ -259,6 +260,8 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
 					+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
 
+			List<LocalVariable> locals = method.variables();
+			
 			// finds also anonymous class
 			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
 			if (!fileClasspath.isEmpty()) {
@@ -299,6 +302,8 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: "
 					+ lineNumber + "\n|bci: " + bci + "\n|_");
 
+			List<LocalVariable> locals = method.variables();
+			
 			// finds also anonymous class
 			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
 			if (!fileClasspath.isEmpty()) {
