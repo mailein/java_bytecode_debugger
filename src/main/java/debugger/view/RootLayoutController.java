@@ -379,7 +379,6 @@ public class RootLayoutController {
 		stage.show();
 	}
 
-	// pseuco*.jar must be under sourcepath
 	// TODO no need for classpath(same as sourcepath)
 	@FXML
 	private void handleCompile() {
@@ -397,7 +396,7 @@ public class RootLayoutController {
 				success.showAndWait();
 			} else if (exitVal == 1) {
 				Alert failure = new Alert(AlertType.INFORMATION,
-						"Failure for javac!\nMake sure you put pseuco*.jar on sourcepath AND sourcepath is path/to/parentFolder of <exportJavaFromPseuCoToThisFolder>",
+						"Failure for javac!\nMake sure sourcepath is the path/to/parentFolder of <exportJavaFromPseuCoToThisFolder>",
 						ButtonType.CLOSE);
 				failure.showAndWait();
 			} else if (exitVal == 2) {
