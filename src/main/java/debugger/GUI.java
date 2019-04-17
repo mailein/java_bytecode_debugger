@@ -20,15 +20,18 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
@@ -87,41 +90,37 @@ public class GUI extends Application {
 				setClasspath(nv);//compile integrated, no need for classpath input
 			}
 		});
-		Button pathButton = new Button("open");
-		
-		gridpane.add(pathLabel, 0, rowIndex);
-		gridpane.add(pathTextField, 1, rowIndex);
-		gridpane.add(pathButton, 2, rowIndex);
-		
-		pathButton.setOnAction(e -> {
+		return gridpane;
+	}
+
+	private void setDefaultPath(boolean[] canStart) {
+		Label label = new Label("sourcepath:");
+		TextField textField = new TextField();
+		textField.setPrefWidth(300.0);
+		textField.setPromptText("path/to/parentFolderOfExportedJavaFolder");
+		Button openButton = new Button("Open");
+		openButton.setOnAction(e -> {
 			DirectoryChooser directoryChooser = new DirectoryChooser();
 			directoryChooser.setTitle("Open");
 			directoryChooser.setInitialDirectory(Paths.get(System.getProperty("user.dir")).toFile());
 			File directory = directoryChooser.showDialog(new Stage());
 			if (directory != null) {
 				try {
-					pathTextField.setText(directory.getCanonicalPath());
+					textField.setText(directory.getCanonicalPath());
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
 			}
 		});
-		return gridpane;
-	}
-
-	private void setDefaultPath(boolean[] canStart) {
-		GridPane gridpane = new GridPane();
-		gridpane.setAlignment(Pos.CENTER);
-		gridpane.setHgap(10.0);
-		gridpane.setVgap(10.0);
-		gridpane = pathRow(gridpane, 0, "sourcepath");
-//		gridpane = pathRow(gridpane, 1, "classpath");//compile integrated, no need for classpath input
+		HBox hbox = new HBox(10.0, label, textField, openButton);
+		hbox.setAlignment(Pos.CENTER);
 		Button saveButton = new Button("save");
 		Button quitButton = new Button("quit");
 		ButtonBar buttonBar = new ButtonBar();
 		buttonBar.getButtons().addAll(saveButton, quitButton);
-		VBox vbox = new VBox(10.0, gridpane, buttonBar);
+		VBox vbox = new VBox(10.0, hbox, buttonBar);
 		vbox.setAlignment(Pos.CENTER);
+		vbox.setPadding(new Insets(35.0));
 
 		Scene scene = new Scene(vbox, 500.0, 200.0);
 		Stage stage = new Stage();
@@ -129,9 +128,16 @@ public class GUI extends Application {
 		stage.setScene(scene);
 		stage.initModality(Modality.APPLICATION_MODAL);
 
-		saveButton.setOnAction(e -> {
-			canStart[0] = true;
-			stage.close();
+		saveButton.setOnAction(e -> {//TODO set sourcepath, classpath
+			String sourcepath = textField.getText();
+			if(!sourcepath.isEmpty()) {
+				setSourcepath(sourcepath);
+				setClasspath(sourcepath);
+				canStart[0] = true;
+				stage.close();
+			}else {
+				saveButton.setTooltip(new Tooltip("enter sourcepath!"));
+			}
 		});
 		quitButton.setOnAction(e -> stage.close());
 
