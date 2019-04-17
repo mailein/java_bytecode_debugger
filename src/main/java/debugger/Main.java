@@ -17,6 +17,8 @@ public class Main {
 	public static void main(String[] args) {
 		newDebugger.addListener((obs, ov, nv) -> {
 			if(nv) {
+				//TODO clear output area
+				GUI.getOutputAreaController().clear();
 				newDebug();
 				newDebugger.set(false);
 			}

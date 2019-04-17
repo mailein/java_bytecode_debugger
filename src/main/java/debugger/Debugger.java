@@ -260,7 +260,11 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
 					+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
 
-			List<LocalVariable> locals = method.variables();
+			try {
+				List<LocalVariable> locals = method.variables();
+			} catch (AbsentInformationException e) {
+				System.out.println("AbsentInformationException in bp event, no local var for this method" + method.name());
+			}
 			
 			// finds also anonymous class
 			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
@@ -302,7 +306,11 @@ public class Debugger implements Runnable {
 			System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: "
 					+ lineNumber + "\n|bci: " + bci + "\n|_");
 
-			List<LocalVariable> locals = method.variables();
+			try {
+				List<LocalVariable> locals = method.variables();
+			} catch (AbsentInformationException e) {
+				System.out.println("AbsentInformationException in step event, no local var for this method" + method.name());
+			}
 			
 			// finds also anonymous class
 			String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);

@@ -68,7 +68,7 @@ public class ThreadAreaController {
 
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
-			if (!terminated && debugger != null) {
+			if (!terminated && debugger != null && nv != null) {
 				if (nv.getValue().contains(debuggerNameMarker)) {
 					tree.getSelectionModel().selectNext();
 				}

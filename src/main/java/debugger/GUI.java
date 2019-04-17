@@ -82,9 +82,9 @@ public class GUI extends Application {
 		pathTextField.textProperty().addListener((obs, ov, nv) -> {
 			if (path.equalsIgnoreCase("sourcepath")) {
 				setSourcepath(nv);
-			}
-			if (path.equalsIgnoreCase("classpath")) {
-				setClasspath(nv);
+//			}
+//			if (path.equalsIgnoreCase("classpath")) {
+				setClasspath(nv);//compile integrated, no need for classpath input
 			}
 		});
 		Button pathButton = new Button("open");
@@ -115,7 +115,7 @@ public class GUI extends Application {
 		gridpane.setHgap(10.0);
 		gridpane.setVgap(10.0);
 		gridpane = pathRow(gridpane, 0, "sourcepath");
-		gridpane = pathRow(gridpane, 1, "classpath");
+//		gridpane = pathRow(gridpane, 1, "classpath");//compile integrated, no need for classpath input
 		Button saveButton = new Button("save");
 		Button quitButton = new Button("quit");
 		ButtonBar buttonBar = new ButtonBar();

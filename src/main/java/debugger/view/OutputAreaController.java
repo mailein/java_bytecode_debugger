@@ -19,4 +19,7 @@ public class OutputAreaController {
 		textArea.appendText(text);
 	}
 	
+	public void clear() {
+		textArea.clear();
+	}
 }
