@@ -23,11 +23,14 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -137,7 +140,8 @@ public class GUI extends Application {
 				canStart[0] = true;
 				stage.close();
 			}else {
-				saveButton.setTooltip(new Tooltip("enter sourcepath!"));
+				Alert alert = new Alert(AlertType.ERROR, "Source path required!", ButtonType.CLOSE);
+				alert.showAndWait();
 			}
 		});
 		quitButton.setOnAction(e -> stage.close());
