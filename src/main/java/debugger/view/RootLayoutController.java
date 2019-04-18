@@ -2,6 +2,7 @@ package debugger.view;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -384,9 +385,20 @@ public class RootLayoutController {
 	private void handleCompile() {
 		ProcessBuilder processBuilder = new ProcessBuilder();
 		String sourcepath = GUI.getSourcepath().get();
+		String fileSourcepath = "";
+		try {
+			fileSourcepath = GUI.getCodeAreaController().getFileOfSelectedTab().getCanonicalPath();
+		} catch (IOException e1) {
+			Alert alert = new Alert(AlertType.ERROR, "Selected tab must contain main method.", ButtonType.CLOSE);
+			alert.showAndWait();
+			e1.printStackTrace();
+			return;
+		}
+		String relativeFileSourcepath = SourceClassConversion.mapFileSourcepath2relativeFileSourcepath(sourcepath, fileSourcepath);
 		String cmd = "cd \'" + sourcepath + "\';"
-				+ "(javac */Main.java || exit 100);"
+				+ "(javac \'" + relativeFileSourcepath + "\' || exit 100);"
 				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
+		//TODO UTF-8
 		processBuilder.command("bash", "-c", cmd);
 		try {
 			Process process = processBuilder.start();
@@ -395,8 +407,13 @@ public class RootLayoutController {
 				Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
 				success.showAndWait();
 			} else if (exitVal == 1) {
+				if(relativeFileSourcepath.isEmpty())
+					relativeFileSourcepath = "<empty>";
 				Alert failure = new Alert(AlertType.INFORMATION,
-						"Failure for javac!\nMake sure sourcepath is the path/to/parentFolder of <exportJavaFromPseuCoToThisFolder>",
+						"Failure for javac! POSSIBLE wrong settings:"
+						+ "\nSourcepath: " + sourcepath
+						+ "\nFile with main method: " + relativeFileSourcepath
+						+ "\n etc.",
 						ButtonType.CLOSE);
 				failure.showAndWait();
 			} else if (exitVal == 2) {

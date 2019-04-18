@@ -1,5 +1,6 @@
 package debugger.misc;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -33,6 +34,14 @@ public class SourceClassConversion {
 			className += p;// get individual dir name
 		}
 		return className;
+	}
+	
+	public static String mapFileSourcepath2relativeFileSourcepath(String sourcepath, String fileSourcepath) {
+		String relative = "";
+		boolean isFile = new File(fileSourcepath).isFile();
+		if(!fileSourcepath.isEmpty() && isFile)
+			relative = fileSourcepath.substring(sourcepath.length() + 1);//+ 1 for "/"
+		return relative;
 	}
 	
 	public static Path mapClassName2FileClasspath(String className, Path classpath) {
