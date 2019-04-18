@@ -98,6 +98,7 @@ public class GUI extends Application {
 		TextField textField = new TextField();
 		textField.setPrefWidth(300.0);
 		textField.setPromptText("path/to/parentFolderOfExportedJavaFolder");
+		textField.setText(Paths.get(System.getProperty("user.dir")).toString());//<CWD> as default path:)
 		Button openButton = new Button("Open");
 		openButton.setOnAction(e -> {
 			DirectoryChooser directoryChooser = new DirectoryChooser();
@@ -140,7 +141,6 @@ public class GUI extends Application {
 			}
 		});
 		quitButton.setOnAction(e -> stage.close());
-
 		stage.showAndWait();
 	}
 
