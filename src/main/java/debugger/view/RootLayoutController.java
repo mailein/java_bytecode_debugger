@@ -624,7 +624,7 @@ public class RootLayoutController {
 			System.out.println(thread.name() + " sets a new step request");
 			StepRequest stepRequest = eventReqMgr.createStepRequest(thread, size, depth);
 			stepRequest.addCountFilter(1);
-			stepRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+			stepRequest.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
 			stepRequest.enable();
 		}
 	}

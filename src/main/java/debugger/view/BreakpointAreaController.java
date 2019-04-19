@@ -175,7 +175,7 @@ public class BreakpointAreaController {
 			Location loc = locations.get(0);
 			EventRequestManager eventReqMgr = dbg.getEventRequestManager();
 			BreakpointRequest breakpointRequest = eventReqMgr.createBreakpointRequest(loc);
-			breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+			breakpointRequest.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
 			breakpointRequest.enable();
 			linebp.setBreakpointRequest(breakpointRequest);
 			int lineNumber = linebp.getLineNumber();

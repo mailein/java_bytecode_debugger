@@ -455,7 +455,7 @@ public class Debugger implements Runnable {
 		notRequestedMatchingLinebp.forEach((nRmLinebp, loc) -> {
 			// request
 			BreakpointRequest bpReq = eventRequestManager.createBreakpointRequest(loc);
-			bpReq.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+			bpReq.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
 			// for the situation: set hitCount BEFORE debuggers launch
 			if (!nRmLinebp.getHitCount().isEmpty()) {
 				try {
