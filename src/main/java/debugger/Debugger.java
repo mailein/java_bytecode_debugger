@@ -52,7 +52,6 @@ import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.ModificationWatchpointRequest;
-import com.sun.jdi.request.StepRequest;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
@@ -222,7 +221,7 @@ public class Debugger implements Runnable {
 						} finally {
 							lock.unlock();
 						}
-					}) ;
+					}).start();
 				} else {
 					execute(event, debugMode);
 
