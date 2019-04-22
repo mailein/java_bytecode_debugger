@@ -394,11 +394,12 @@ public class RootLayoutController {
 			e1.printStackTrace();
 			return;
 		}
-		String relativeFileSourcepath = SourceClassConversion.mapFileSourcepath2relativeFileSourcepath(sourcepath, fileSourcepath);
+		String relativeFileSourcepath = SourceClassConversion.mapFileSourcepath2relativeFileSourcepath(sourcepath,
+				fileSourcepath);
 		String cmd = "cd \'" + sourcepath + "\';"
 				+ "(javac \'" + relativeFileSourcepath + "\' || exit 100);"
 				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
-		//TODO UTF-8
+		// TODO UTF-8
 		processBuilder.command("bash", "-c", cmd);
 		try {
 			Process process = processBuilder.start();
@@ -407,17 +408,18 @@ public class RootLayoutController {
 				Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
 				success.showAndWait();
 			} else if (exitVal == 1) {
-				if(relativeFileSourcepath.isEmpty())
+				if (relativeFileSourcepath.isEmpty())
 					relativeFileSourcepath = "<empty>";
 				Alert failure = new Alert(AlertType.INFORMATION,
 						"Failure for javac! POSSIBLE wrong settings:"
-						+ "\nSourcepath: " + sourcepath
-						+ "\nFile with main method: " + relativeFileSourcepath
-						+ "\n etc.",
+								+ "\nSourcepath: " + sourcepath
+								+ "\nFile with main method: " + relativeFileSourcepath
+								+ "\n etc.",
 						ButtonType.CLOSE);
 				failure.showAndWait();
 			} else if (exitVal == 2) {
-				Alert failure = new Alert(AlertType.INFORMATION, "Failure for javap, but it's unlikely. Please contact developer.\n",
+				Alert failure = new Alert(AlertType.INFORMATION,
+						"Failure for javap, but it's unlikely. Please contact developer.\n",
 						ButtonType.CLOSE);
 				failure.showAndWait();
 			}
@@ -587,9 +589,31 @@ public class RootLayoutController {
 	}
 
 	@FXML
-	private void handleResume() {// TODO why it doesn't work after suspend thread
+	private void handleResume() {
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
-		currentDebugger.resume();
+		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
+		if (selectedThread == null) {
+			if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
+				List<ThreadReference> suspendedThreads = currentDebugger.getSuspendedThreads();
+				suspendedThreads.forEach(thread -> {
+					currentDebugger.setSuspendCount(thread, 1);
+				});
+				suspendedThreads.clear();
+				// resume after clearing all suspended threads,
+				// to prevent resumed thread get into bp/stepEvent so fast, added to
+				// suspendedThreads, but accidently removed by clear() here
+				currentDebugger.getVm().resume();
+			} else {// wrong
+
+			}
+		} else {// selected thread resume
+			if (currentDebugger.getSuspendedThreads().contains(selectedThread)) {
+				currentDebugger.getSuspendedThreads().remove(selectedThread);
+				currentDebugger.setSuspendCount(selectedThread, 0);
+			} else {// do nothing
+					// TODO deactivate resume button ==> activate for other situations
+			}
+		}
 	}
 
 	@FXML
@@ -663,9 +687,12 @@ public class RootLayoutController {
 //				e.printStackTrace();
 //			}
 //		}
-		StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
-		stepi.execute();
-		currentDebugger.resume();
+		if(currentDebugger.getSuspendedThreads().contains(currentThread)) {
+			currentDebugger.getSuspendedThreads().remove(currentThread);
+			StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
+			stepi.execute();
+			currentDebugger.setSuspendCount(currentThread, 0);
+		}
 	}
 
 	public void setOverviewController(OverviewController overviewController) {

@@ -39,6 +39,7 @@ public class ThreadAreaController {
 	Map<ThreadReference, TreeItem<String>> threadsTreeItems = new HashMap<>();
 	Map<ThreadReference, Map<TreeItem<String>, StackFrame>> stackFramesTreeItems = new HashMap<>();
 	private ThreadReference selectedThread;
+	private boolean isDebuggerselected = false;
 //	private StackFrame selectedStackFrame;
 //	private StackFrame prevStackFrame;//for popFrames
 
@@ -63,20 +64,23 @@ public class ThreadAreaController {
 		tree.prefWidthProperty().bind(anchorPane.widthProperty());// fit tree's size to parent anchorpane
 		tree.prefHeightProperty().bind(anchorPane.heightProperty());
 
-		tree.setOnMouseClicked(e -> toggleThread(e));
+//		tree.setOnMouseClicked(e -> toggleThread(e));
 
 		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
 			if (!terminated && debugger != null && nv != null) {
 				if (nv.getValue().contains(debuggerNameMarker)) {
-					tree.getSelectionModel().selectNext();
+					this.isDebuggerselected = true;
+//					tree.getSelectionModel().selectNext();
 				}
 				if (nv.getValue().contains(threadNameMarker)) {
+					this.isDebuggerselected = false;
 					this.selectedThread = String2Thread(nv.getValue());
 					GUI.getWatchpointAreaController().evalAll();//
 //					this.prevStackFrame = null;//current frame is top frame
 				}
 				if (nv.getValue().contains(stackNameMarker)) {
+					this.isDebuggerselected = false;
 					String threadString = nv.getParent().getValue();
 					this.selectedThread = String2Thread(threadString);
 					GUI.getWatchpointAreaController().evalAll();
@@ -270,26 +274,30 @@ public class ThreadAreaController {
 		return className + "." + methodName + "(" + argNames[0] + ")" + stackNameMarker + lineNumber + " bci:" + bci;
 	}
 
-	private void toggleThread(MouseEvent e) {
-		if (e.getClickCount() == 2) {
-			ImageView node;
-			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
-				debugger.getSuspendedThreads().add(selectedThread);
-				node = getPlayIcon();
-			} else {// paused -> play
-				debugger.getSuspendedThreads().remove(selectedThread);
-				node = getPauseIcon();
-			}
-
-			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
-			threadTreeItem.setGraphic(node);
-		}
-	}
+//	private void toggleThread(MouseEvent e) {
+//		if (e.getClickCount() == 2) {
+//			ImageView node;
+//			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
+//				debugger.getSuspendedThreads().add(selectedThread);
+//				node = getPlayIcon();
+//			} else {// paused -> play
+//				debugger.getSuspendedThreads().remove(selectedThread);
+//				node = getPauseIcon();
+//			}
+//
+//			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
+//			threadTreeItem.setGraphic(node);
+//		}
+//	}
 
 	public Debugger getRunningDebugger() {
 		if (!terminated)
 			return debugger;
 		return null;
+	}
+
+	public boolean isDebuggerselected() {
+		return isDebuggerselected;
 	}
 
 	public ThreadReference getSelectedThread() {

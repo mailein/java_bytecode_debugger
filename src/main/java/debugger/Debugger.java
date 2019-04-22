@@ -198,25 +198,27 @@ public class Debugger implements Runnable {
 					vmExit = true;
 				} else if (event instanceof BreakpointEvent) {
 					ThreadReference thread = ((BreakpointEvent) event).thread();
+					addToSuspended(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
-							lock.lock();//after this threadRef's handled the last event
-							if(debugMode) {
+							lock.lock();// after this threadRef's handled the last event
+							if (debugMode) {
 								breakpointEventHandler(event);
-							}else {
+							} else {
 								eventSet.resume();
 							}
 						} finally {
 							lock.unlock();
 						}
-					}).start(); 
+					}).start();
 				} else if (event instanceof StepEvent) {
 					ThreadReference thread = ((StepEvent) event).thread();
+					addToSuspended(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
-							lock.lock();//after this threadRef's handled the last event
+							lock.lock();// after this threadRef's handled the last event
 							stepEventHandler(event);
 						} finally {
 							lock.unlock();
@@ -357,8 +359,8 @@ public class Debugger implements Runnable {
 		GUI.getWatchpointAreaController().evalAll();
 		GUI.getLocalVarAreaController().refresh();
 		// resume controlled by GUI/ controller
-		vm.suspend();
-		eventSet.resume();
+//		vm.suspend();
+//		eventSet.resume();
 	}
 
 	private void breakpointEventHandler(Event event) {
@@ -402,8 +404,8 @@ public class Debugger implements Runnable {
 		GUI.getWatchpointAreaController().evalAll();
 		GUI.getLocalVarAreaController().refresh();
 		// resume controlled by GUI/ controller
-		vm.suspend();
-		eventSet.resume();
+//		vm.suspend();
+//		eventSet.resume();
 	}
 
 	private void requestWatchpoints(ReferenceType refType) {
@@ -563,6 +565,10 @@ public class Debugger implements Runnable {
 		return classpath;
 	}
 
+	public VirtualMachine getVm() {
+		return vm;
+	}
+
 	public EventRequestManager getEventRequestManager() {
 		return eventRequestManager;
 	}
@@ -608,34 +614,53 @@ public class Debugger implements Runnable {
 		return anonymousClasses;
 	}
 
-	/**
-	 * @param thread
-	 * @param        idealSuspendCount: 2 is to suspend, 1 resume
-	 */
-	private void setSuspendCount(ThreadReference thread, int idealSuspendCount) {
+	public void setSuspendCount(ThreadReference thread, int idealSuspendCount) {
 		int count = thread.suspendCount();
 		if (count == idealSuspendCount)
 			return;
-		while (thread.suspendCount() < idealSuspendCount)
-			thread.suspend();
-		while (thread.suspendCount() > idealSuspendCount)
-			thread.resume();
+		if(count < idealSuspendCount) {
+			for(int i = count; i < idealSuspendCount; i++) {
+				thread.suspend();
+			}
+		}
+		// can't use suspendCount in loop condition, after execute loop body, the
+		// resumed thread will run to a breakpoint and suspendCount will +1 again
+		if(count > idealSuspendCount) {
+			for(int i = count; i > idealSuspendCount; i--) {
+				thread.resume();
+			}
+		}
 	}
 
-	public void resume() {
-		threads.forEach(thread -> {
-			if (suspendedThreads.contains(thread)) {
-				setSuspendCount(thread, 2);// suspend thread
-			} else {
-				setSuspendCount(thread, 1);// resume thread
-			}
-		});
-		vm.resume();
-	}
+//	public void debuggerResume() {
+//		threads.forEach(thread -> {
+//			if (suspendedThreads.contains(thread)) {
+//				setSuspendCount(thread, 2);// suspend thread
+//			} else {
+//				setSuspendCount(thread, 1);// resume thread
+//			}
+//		});
+//		vm.resume();
+//	}
 
 	public void terminate() {
 		vmExit = true;
 		vm.resume();
+	}
+
+	// return true for newly added, false for already in suspended list
+	private boolean addToSuspended(ThreadReference thread) {
+		if (!suspendedThreads.contains(thread)) {
+			suspendedThreads.add(thread);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	// return true for newly removed, false for already not/never in suspended list
+	public boolean removeFromSuspended(ThreadReference thread) {
+		return suspendedThreads.remove(thread);
 	}
 
 	public List<ThreadReference> getSuspendedThreads() {
