@@ -128,6 +128,8 @@ public class Bytecode {// fileIndex starts with 1
 		}
 
 		private boolean parseOneCodeLine(String oneCodeLine, int fileIndex) {
+			if(!oneCodeLine.contains(":"))
+				return false;
 			String tmp = oneCodeLine.substring(0, oneCodeLine.indexOf(":"));
 			try {
 				long bci = Long.parseUnsignedLong(tmp.strip());
@@ -153,7 +155,7 @@ public class Bytecode {// fileIndex starts with 1
 		}
 
 		private boolean parseOneTableLine(String oneTableLine) {
-			if(oneTableLine.isEmpty())
+			if(oneTableLine.isEmpty() || !oneTableLine.contains("line") || !oneTableLine.contains(":"))
 				return false;
 			String lineString = oneTableLine.substring(oneTableLine.indexOf("line") + 4, oneTableLine.indexOf(":"));
 			String bciString = oneTableLine.substring(oneTableLine.indexOf(":") + 1);
