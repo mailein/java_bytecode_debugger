@@ -101,8 +101,8 @@ public class CodeAreaController {
 	class LineIndicatorFactory implements IntFunction<Node> {// TODO
 		@Override
 		public Node apply(int lineNumber) {
-			Polygon triangle = new Polygon(0.0, 0.0, 10.0, 5.0, 0.0, 10.0);
-			triangle.setFill(Color.GREEN);
+			Polygon triangle = new Polygon(0.0, 2.0, 5.0, 2.0, 5.0, 5.0, 10.0, 0.0, 5.0, -5.0, 5.0, -2.0, 0.0, -2.0);
+			triangle.setFill(Color.BLUE);
 			triangle.setVisible(false);
 
 //			ThreadAreaController threadAreaController = GUI.getThreadAreaController();

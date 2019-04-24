@@ -307,22 +307,11 @@ public class ThreadAreaController {
 	// https://www.iconfinder.com/icons/3855622/pause_play_icon
 	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
 	private ImageView getPauseIcon() {
-		try {
-			return new ImageView(
-					new Image(new FileInputStream(new File("src/main/resources/debugger/view/pause.png"))));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/pause.png")));
 	}
 
 	private ImageView getPlayIcon() {
-		try {
-			return new ImageView(new Image(new FileInputStream(new File("src/main/resources/debugger/view/play.png"))));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/play.png")));
 	}
 //
 //	public StackFrame getPrevStackFrame() {

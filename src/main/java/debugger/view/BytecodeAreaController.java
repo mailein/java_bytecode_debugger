@@ -77,7 +77,7 @@ public class BytecodeAreaController {
 	class LineIndicatorFactory implements IntFunction<Node> {
 		@Override
 		public Node apply(int value) {
-			Polygon triangle = new Polygon(0.0, 0.0, 10.0, 5.0, 0.0, 10.0);
+			Polygon triangle = new Polygon(0.0, 2.0, 5.0, 2.0, 5.0, 5.0, 10.0, 0.0, 5.0, -5.0, 5.0, -2.0, 0.0, -2.0);
 			triangle.setFill(Color.ORANGE);
 			if (indicator != value)
 				triangle.setVisible(false);
