@@ -635,6 +635,9 @@ public class Debugger implements Runnable {
 	private boolean addToSuspended(ThreadReference thread) {
 		if (!suspendedThreads.contains(thread)) {
 			suspendedThreads.add(thread);
+			Platform.runLater(() -> {
+				GUI.getThreadAreaController().setThreadGraphic(thread, true);
+			});
 			return true;
 		} else {
 			return false;
@@ -643,7 +646,13 @@ public class Debugger implements Runnable {
 
 	// return true for newly removed, false for already not/never in suspended list
 	public boolean removeFromSuspended(ThreadReference thread) {
-		return suspendedThreads.remove(thread);
+		boolean newlyRemoved = suspendedThreads.remove(thread);
+		if(newlyRemoved) {
+			Platform.runLater(() -> {
+				GUI.getThreadAreaController().setThreadGraphic(thread, false);
+			});
+		}
+		return newlyRemoved;
 	}
 
 	public List<ThreadReference> getSuspendedThreads() {
