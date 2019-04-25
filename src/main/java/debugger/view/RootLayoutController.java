@@ -592,21 +592,17 @@ public class RootLayoutController {
 	private void handleResume() {
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
-		if (selectedThread == null) {
-			if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
-				List<ThreadReference> suspendedThreads = currentDebugger.getSuspendedThreads();
-				suspendedThreads.forEach(thread -> {
-					currentDebugger.setSuspendCount(thread, 1);
-				});
-				suspendedThreads.clear();
-				// resume after clearing all suspended threads,
-				// to prevent resumed thread get into bp/stepEvent so fast, added to
-				// suspendedThreads, but accidently removed by clear() here
-				currentDebugger.getVm().resume();
-			} else {// wrong
-
-			}
-		} else {// selected thread resume
+		if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
+			List<ThreadReference> suspendedThreads = currentDebugger.getSuspendedThreads();
+			suspendedThreads.forEach(thread -> {
+				currentDebugger.setSuspendCount(thread, 1);
+			});
+			suspendedThreads.clear();
+			// resume after clearing all suspended threads,
+			// to prevent resumed thread get into bp/stepEvent so fast, added to
+			// suspendedThreads, but accidently removed by clear() here
+			currentDebugger.getVm().resume();
+		} else if (selectedThread != null) {// selected thread resume
 			if (currentDebugger.getSuspendedThreads().contains(selectedThread)) {
 				currentDebugger.getSuspendedThreads().remove(selectedThread);
 				currentDebugger.setSuspendCount(selectedThread, 0);
@@ -687,7 +683,7 @@ public class RootLayoutController {
 //				e.printStackTrace();
 //			}
 //		}
-		if(currentDebugger.getSuspendedThreads().contains(currentThread)) {
+		if (currentDebugger.getSuspendedThreads().contains(currentThread)) {
 			currentDebugger.getSuspendedThreads().remove(currentThread);
 			StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 			stepi.execute();

@@ -80,13 +80,11 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
+	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
-	private List<ThreadReference> suspendedThreads = new ArrayList<>();
-	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// thread: actually no need, because global
-																		// variables
-																		// doesn't keep old value for different events
+	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// for watchpoint eval
 	private Map<ThreadReference, Lock> eventHandlerThreads = new HashMap<>();
 
 	private String mainClassName;
@@ -326,56 +324,6 @@ public class Debugger implements Runnable {
 		}
 	}
 
-	private void stepEventHandler(Event event) {
-		StepEvent stepEvent = (StepEvent) event;
-		ThreadReference thread = stepEvent.thread();
-		Location location = stepEvent.location();
-		int lineNumber = location.lineNumber();
-		long bci = location.codeIndex();
-		Method method = location.method();
-		if (lineNumber == -1 || bci == -1) {
-			System.out.println("Problem: step into a native method.");
-			return;
-		}
-		ReferenceType classRefType = method.declaringType();
-		if (classRefType == null) {
-			return;
-		}
-		System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: "
-				+ lineNumber + "\n|bci: " + bci + "\n|_");
-
-		try {
-			List<LocalVariable> locals = method.variables();
-		} catch (AbsentInformationException e) {
-			System.out.println(
-					"AbsentInformationException in step event, no local var for this method" + method.name());
-		}
-
-		// finds also anonymous class
-		String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
-		if (!fileClasspath.isEmpty()) {
-			BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
-			Platform.runLater(() -> {
-				bytecodeAreaController.openFile(fileClasspath, method, lineNumber, bci);
-			});
-		}
-
-		// for line indicator
-		// TODO sometimes no indicator
-		Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-		// refresh stackFrames
-		GUI.getThreadAreaController().updateStackFrameBranches(thread);
-		// request watchpoints
-		requestWatchpoints(classRefType);
-		// refresh watchpoint, localVar
-		this.currentEvent.put(thread, stepEvent);
-		GUI.getWatchpointAreaController().evalAll();
-		GUI.getLocalVarAreaController().refresh();
-		// resume controlled by GUI/ controller
-//		vm.suspend();
-//		eventSet.resume();
-	}
-
 	private void breakpointEventHandler(Event event) {
 		BreakpointEvent breakpointEvent = (BreakpointEvent) event;
 		ThreadReference thread = breakpointEvent.thread();
@@ -390,13 +338,32 @@ public class Debugger implements Runnable {
 		System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
 				+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
 
-		try {
-			List<LocalVariable> locals = method.variables();
-		} catch (AbsentInformationException e) {
-			System.out.println(
-					"AbsentInformationException in bp event, no local var for this method" + method.name());
+		updateGUI(event, thread, location, lineNumber, bci, method, classRefType);
+	}
+	
+	private void stepEventHandler(Event event) {
+		StepEvent stepEvent = (StepEvent) event;
+		ThreadReference thread = stepEvent.thread();
+		Location location = stepEvent.location();
+		int lineNumber = location.lineNumber();
+		long bci = location.codeIndex();
+		Method method = location.method();
+		ReferenceType classRefType = method.declaringType();
+		if (classRefType == null) {
+			return;
 		}
+		if (lineNumber == -1 || bci == -1) {
+			System.out.println("Problem: step into a native method.");
+			return;
+		}
+		System.out.println("--------\nStepEvent" + "\n(" + thread.name() + ")\n|" + method.name() + "\n|line: "
+				+ lineNumber + "\n|bci: " + bci + "\n|_");
 
+		updateGUI(event, thread, location, lineNumber, bci, method, classRefType);
+	}
+
+	private void updateGUI(Event event, ThreadReference thread, Location location, int lineNumber, long bci,
+			Method method, ReferenceType classRefType) {
 		// finds also anonymous class
 		String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
 		if (!fileClasspath.isEmpty()) {
@@ -406,19 +373,22 @@ public class Debugger implements Runnable {
 			});
 		}
 
-		// for line indicator
-		Platform.runLater(() -> GUI.getCodeAreaController().setCurrLine(lineNumber));
-		// refresh stackFrames
-		GUI.getThreadAreaController().updateStackFrameBranches(thread);
+		// TODO sometimes no indicator
+		Platform.runLater(() -> {
+			// for line indicator
+			GUI.getCodeAreaController().setCurrLine(lineNumber);	
+			// refresh stackFrames
+			GUI.getThreadAreaController().updateStackFrameBranches(thread);
+		});
 		// request watchpoints
 		requestWatchpoints(classRefType);
-		// refresh watchpoint, localVar
-		this.currentEvent.put(thread, breakpointEvent);
-		GUI.getWatchpointAreaController().evalAll();
-		GUI.getLocalVarAreaController().refresh();
-		// resume controlled by GUI/ controller
-//		vm.suspend();
-//		eventSet.resume();
+		// watchpoint eval need loc info from event
+		this.currentEvent.put(thread, event);
+		Platform.runLater(() -> {
+			// refresh watchpoint, localVar
+			GUI.getWatchpointAreaController().evalAll();
+			GUI.getLocalVarAreaController().refresh();
+		});
 	}
 
 	private void requestWatchpoints(ReferenceType refType) {

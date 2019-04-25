@@ -15,6 +15,7 @@ import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.Location;
 import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
+import com.sun.jdi.event.Event;
 
 import debugger.Debugger;
 import debugger.GUI;
@@ -45,7 +46,8 @@ public class ThreadAreaController {
 
 	// to make sure thread has been added to threadsTreeItems,
 	// so that threadsTreeItems.get(thread) won't be null
-	private Lock threadsTreeItemsLock = new ReentrantLock();
+	private Lock threadsTreeItemsLock = new ReentrantLock();// TODO lock for the whole tree, unlock after clear all
+															// stackFrames?
 	private Condition addedThread = threadsTreeItemsLock.newCondition();
 
 	private boolean terminated = false;
@@ -72,6 +74,7 @@ public class ThreadAreaController {
 				if (nv.getValue().contains(debuggerNameMarker)) {
 					this.isDebuggerselected = true;
 //					tree.getSelectionModel().selectNext();
+					//don't set selectedThread to null here! in case NullPointException
 				}
 				if (nv.getValue().contains(threadNameMarker)) {
 					this.isDebuggerselected = false;
@@ -93,11 +96,22 @@ public class ThreadAreaController {
 //						System.out.println("prev frame is" + prevFrame.getValue());
 //					}
 				}
+				//update line indicator
+				if(selectedThread.isSuspended()) {
+					try {
+						StackFrame stackFrame = selectedThread.frame(0);
+						int lineNumber = stackFrame.location().lineNumber();
+						GUI.getCodeAreaController().setCurrLine(lineNumber);
+					} catch (IncompatibleThreadStateException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		});
 		tree.setShowRoot(false);
 	}
 
+	// ----------methods for managing tree in view port------------//
 	public void addDebugger(Debugger debugger) {
 		this.debugger = debugger;
 		addDebuggerToTree(debugger);
@@ -107,26 +121,22 @@ public class ThreadAreaController {
 	public void applyTerminatedMarker(Debugger debugger) {
 		String s = terminatedMarker + generateDebuggerName(debugger);
 		debuggerTreeItem.setValue(s);
-
 		terminated = true;// can not remove this debugger yet
-
-		// remove all treeItems under this debugger other than debuggerTreeItem
-		removeDebuggerChildrenFromTree(debugger);
+		// remove all treeItems under this debugger but not the debuggerTreeItem
+		debuggerTreeItem.getChildren().clear();
 	}
 
+	// at the start of next debug session
 	public void removeTerminatedDebugger() {
-		if (terminated)
-			removeDebugger(debugger);
-	}
-
-	public void removeDebugger(Debugger debugger) {
-		removeDebuggerFromTree(debugger);
-		this.debugger = null;
-		this.terminated = false;
+		if (terminated) {
+			// remove debugger from tree
+			tree.getRoot().getChildren().remove(debuggerTreeItem);
+			this.debugger = null;
+			this.terminated = false;
+		}
 	}
 
 	// only added Debugger and its threadReferences to root, stackFrame is not added
-	// in this method
 	private void addDebuggerToTree(Debugger debugger) {
 		// debugger
 		debuggerTreeItem = addBranch(generateDebuggerName(debugger), tree.getRoot());
@@ -139,7 +149,7 @@ public class ThreadAreaController {
 						if (!terminated) {
 							String name = generateThreadName(thread);
 							TreeItem<String> threadTreeItem = addBranch(name, debuggerTreeItem);
-							threadTreeItem.setGraphic(getPauseIcon());
+//							threadTreeItem.setGraphic(getPauseIcon());
 							tree.getSelectionModel().select(threadTreeItem);
 							try {
 								threadsTreeItemsLock.lock();// on GUI thread now
@@ -170,14 +180,6 @@ public class ThreadAreaController {
 		});
 	}
 
-	private void removeDebuggerFromTree(Debugger debugger) {
-		tree.getRoot().getChildren().remove(debuggerTreeItem);
-	}
-
-	private void removeDebuggerChildrenFromTree(Debugger debugger) {
-		debuggerTreeItem.getChildren().clear();
-	}
-
 	// add threads to Debugger; add stackFrames to thread
 	private TreeItem<String> addBranch(String self, TreeItem<String> parent) {
 		TreeItem<String> item = new TreeItem<>();
@@ -193,55 +195,81 @@ public class ThreadAreaController {
 		parent.getChildren().removeAll(list);
 	}
 
-	/**
-	 * @param thread of the Breakpoint/Step Event, which is suspended right now
-	 */
-	public void updateStackFrameBranches(ThreadReference thread) {
-		// remove all old stackFrames for this thread
-		TreeItem<String> threadTreeItem = null;
-		try {
-			threadsTreeItemsLock.lock();// on Debugger thread now
-			while (!threadsTreeItems.containsKey(thread)) {
-				addedThread.await();
+	// update all suspended threads, running thread has no StackFrame
+	public void updateStackFrameBranches(ThreadReference eventThread) {
+		ObservableList<ThreadReference> threads = debugger.getThreads();
+		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
+		for (ThreadReference thread : threads) {
+			// remove all old stackFrames for all threads
+			TreeItem<String> threadTreeItem = null;
+			try {
+				threadsTreeItemsLock.lock();// on Debugger thread now
+				while (!threadsTreeItems.containsKey(thread)) {
+					addedThread.await();
+				}
+				threadTreeItem = threadsTreeItems.get(thread);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} finally {
+				threadsTreeItemsLock.unlock();
 			}
-			threadTreeItem = threadsTreeItems.get(thread);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} finally {
-			threadsTreeItemsLock.unlock();
-		}
-		System.out.println("contains thread " + thread.name() + ": " + threadsTreeItems.containsKey(thread));
-		threadTreeItem.getChildren().clear();// view
-		stackFramesTreeItems.remove(thread);// data
-		// add all current stackFrames for this thread
-		Map<TreeItem<String>, StackFrame> map = new HashMap<>();
-		stackFramesTreeItems.put(thread, map);// data
-		StackFrame topFrame = null;
-		try {
-			topFrame = thread.frame(0);
-			for (StackFrame sf : thread.frames()) {
-				String stackFrameName = generateStackFrameName(sf);
-				TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadTreeItem);// view
-				map.put(stackFrameTreeItem, sf);// data
+			System.out.println("contains thread " + thread.name() + ": " + threadsTreeItems.containsKey(thread));
+			threadTreeItem.getChildren().clear();// view
+			stackFramesTreeItems.remove(thread);// data
+
+			// add stackFrame to suspended threads
+			if (suspendedThreads.contains(thread)) {
+				// add all current stackFrames for this thread
+				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
+				stackFramesTreeItems.put(thread, map);// data
+				StackFrame topFrame = null;
+				try {
+					topFrame = thread.frame(0);
+					for (StackFrame sf : thread.frames()) {
+						String stackFrameName = generateStackFrameName(sf);
+						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadTreeItem);// view
+						map.put(stackFrameTreeItem, sf);// data
+					}
+				} catch (IncompatibleThreadStateException e) {
+					e.printStackTrace();
+				}
+				// go to file for only eventThread
+				if (eventThread.equals(thread)) {
+					// top frame's *.java open in selectedTab?
+					Location loc = topFrame.location();
+					System.out.println("goto top frame's location, thread: " + thread.name());
+					SuspensionLocation.gotoLocationFile(loc);
+				}
 			}
-		} catch (IncompatibleThreadStateException e) {
-			e.printStackTrace();
 		}
-		// top frame's *.java open in selectedTab?
-		Location loc = topFrame.location();
-		System.out.println("before goto location, thread: " + thread.name());
-		SuspensionLocation.gotoLocationFile(loc);
 	}
 
-	// s is generated by Debugger/ThreadReference/StackFrame
-	private TreeItem<String> getTreeItem(String s, TreeItem<String> parent) {
-		for (TreeItem<String> item : parent.getChildren()) {
-			if (item.getValue().equals(s))
-				return item;
-		}
-		return null;
-	}
+//	private void toggleThread(MouseEvent e) {
+//	if (e.getClickCount() == 2) {
+//		ImageView node;
+//		if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
+//			debugger.getSuspendedThreads().add(selectedThread);
+//			node = getPlayIcon();
+//		} else {// paused -> play
+//			debugger.getSuspendedThreads().remove(selectedThread);
+//			node = getPauseIcon();
+//		}
+//
+//		TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
+//		threadTreeItem.setGraphic(node);
+//	}
+//}
 
+//	// s is generated by Debugger/ThreadReference/StackFrame
+//	private TreeItem<String> getTreeItem(String s, TreeItem<String> parent) {
+//		for (TreeItem<String> item : parent.getChildren()) {
+//			if (item.getValue().equals(s))
+//				return item;
+//		}
+//		return null;
+//	}
+
+	// ----------helper methods------------//
 	private ThreadReference String2Thread(String threadString) {
 		if (this.debugger == null || terminated)
 			return null;
@@ -274,22 +302,17 @@ public class ThreadAreaController {
 		return className + "." + methodName + "(" + argNames[0] + ")" + stackNameMarker + lineNumber + " bci:" + bci;
 	}
 
-//	private void toggleThread(MouseEvent e) {
-//		if (e.getClickCount() == 2) {
-//			ImageView node;
-//			if (!debugger.getSuspendedThreads().contains(selectedThread)) {// playing -> pause
-//				debugger.getSuspendedThreads().add(selectedThread);
-//				node = getPlayIcon();
-//			} else {// paused -> play
-//				debugger.getSuspendedThreads().remove(selectedThread);
-//				node = getPauseIcon();
-//			}
+//	// https://www.iconfinder.com/icons/3855622/pause_play_icon
+//	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
+//	private ImageView getPauseIcon() {
+//		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/pause.png")));
+//	}
 //
-//			TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(selectedThread), debuggerTreeItem);
-//			threadTreeItem.setGraphic(node);
-//		}
+//	private ImageView getPlayIcon() {
+//		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/play.png")));
 //	}
 
+	// ----------getters------------//
 	public Debugger getRunningDebugger() {
 		if (!terminated)
 			return debugger;
@@ -304,16 +327,6 @@ public class ThreadAreaController {
 		return selectedThread;
 	}
 
-	// https://www.iconfinder.com/icons/3855622/pause_play_icon
-	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
-	private ImageView getPauseIcon() {
-		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/pause.png")));
-	}
-
-	private ImageView getPlayIcon() {
-		return new ImageView(new Image(getClass().getResourceAsStream("/debugger/view/play.png")));
-	}
-//
 //	public StackFrame getPrevStackFrame() {
 //		return prevStackFrame;
 //	}
