@@ -85,7 +85,6 @@ public class BreakpointAreaController {
 
 		vbox.getChildren().addAll(hbox, table);
 
-		// TODO after remove breakpoint, the blue dot doesn't disappear
 		removeButton.setOnAction(e -> {
 			breakpoints.remove(table.getSelectionModel().getSelectedItem());
 			CodeAreaController codeAreaController = GUI.getCodeAreaController();

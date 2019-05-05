@@ -77,7 +77,7 @@ public class CodeAreaController {
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
 	private Tab selectedTab = null;
 	private CodeArea selectedCodeArea = null;
-	private IntegerProperty currLine = new SimpleIntegerProperty();
+	private IntegerProperty currLine = new SimpleIntegerProperty();//always relative to selectedTab's file
 
 	class BreakpointFactory implements IntFunction<Node> {
 		@Override
@@ -85,7 +85,8 @@ public class CodeAreaController {
 			Circle circle = new Circle(5.0, Color.BLUE);
 			circle.setVisible(false);
 			Label label = new Label();
-			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));//see no words when scroll right
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));// see no words when scroll
+																							// right
 			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
@@ -168,7 +169,7 @@ public class CodeAreaController {
 	public void refreshParagraphGraphicFactory(int currLineOv, int currLineNv) {
 		List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
 		graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
-		if(graphicFactory.get(0) == null)
+		if (graphicFactory.get(0) == null)
 			return;
 		graphicFactory.add(line -> {
 			HBox hbox = (HBox) graphicFactory.get(0).apply(line);
@@ -193,10 +194,11 @@ public class CodeAreaController {
 
 			// indicator for ov, nv
 			Polygon triangle = (Polygon) hbox.getChildren().get(2);
-			if (line + 1 == currLineOv)
-				triangle.setVisible(false);
-			if (line + 1 == currLineNv)
+			if (line + 1 == currLineNv) {
 				triangle.setVisible(true);
+			} else {
+				triangle.setVisible(false);
+			}
 			selectedCodeArea.showParagraphInViewport(currLineNv - 1);
 			return hbox;
 		});
@@ -205,9 +207,9 @@ public class CodeAreaController {
 
 	// handle MenuItems: New and Open
 	public void newTab(File file) {
-		//if file opened, select the tab of that file
+		// if file opened, select the tab of that file
 		boolean ret = avoidOpeningSameFile(file);
-		if(ret)
+		if (ret)
 			return;
 		// get name and content
 		String tempName = file.getName();
@@ -361,20 +363,21 @@ public class CodeAreaController {
 	public void gotoTabOfFile(File file) {// TODO lineIndicator
 		boolean[] isOpened = { false };
 		tabsWithFile.forEach((t, f) -> {
-			if (f.equals(file)) {
+			if (f.equals(file)) {// already opened in another tab
 				tabPane.getSelectionModel().select(t);
-				if(f.equals(file))
-					isOpened[0] = true;
+				isOpened[0] = true;
 			}
 		});
-		if (!isOpened[0]) {
+		if (!isOpened[0]) {// not opened
 			newTab(file);
 		}
+		// refresh breakpoints, line indicator
+		refreshParagraphGraphicFactory(-1, getCurrLine());
 	}
 
 	public void gotoTabOfError(File file) {
 		boolean ret = avoidOpeningSameFile(file);
-		if(ret)
+		if (ret)
 			return;
 		String name = file.getName();
 		String content = "can't open this file";
@@ -389,24 +392,24 @@ public class CodeAreaController {
 	}
 
 	private boolean avoidOpeningSameFile(File fileToBeOpened) {
-		boolean[] ret = {false};
+		boolean[] ret = { false };
 		tabsWithFile.forEach((t, f) -> {
-			if(f.getName().equals(fileToBeOpened.getName())) {
+			if (f.getName().equals(fileToBeOpened.getName())) {
 				tabPane.getSelectionModel().select(t);
 				ret[0] = true;
 			}
 		});
 		return ret[0];
 	}
-	
+
 	public void setCurrLine(int line) {
 		this.currLine.set(line);
 	}
-	
+
 	public int getCurrLine() {
 		return this.currLine.get();
 	}
-	
+
 	public DoubleProperty getAnchorPanePrefWidthProperty() {
 		return this.anchorPane.prefWidthProperty();
 	}
