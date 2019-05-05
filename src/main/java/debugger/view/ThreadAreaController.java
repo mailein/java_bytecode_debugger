@@ -1,8 +1,5 @@
 package debugger.view;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +12,6 @@ import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.Location;
 import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
-import com.sun.jdi.event.Event;
 
 import debugger.Debugger;
 import debugger.GUI;
@@ -25,9 +21,6 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -70,7 +63,6 @@ public class ThreadAreaController {
 
 //		tree.setOnMouseClicked(e -> toggleThread(e));
 
-		// it's safe to select stackFrame because the debuggee is suspended.
 		tree.getSelectionModel().selectedItemProperty().addListener((obs, ov, nv) -> {
 			if (!terminated && debugger != null && nv != null) {
 				if (nv.getValue().contains(debuggerNameMarker)) {
@@ -85,10 +77,12 @@ public class ThreadAreaController {
 //					this.prevStackFrame = null;//current frame is top frame
 				}
 				if (nv.getValue().contains(stackNameMarker)) {
-					this.isDebuggerselected = false;
-					String threadString = nv.getParent().getValue();
-					this.selectedThread = String2Thread(threadString);
-					GUI.getWatchpointAreaController().evalAll();
+					tree.getSelectionModel().select(nv.getParent());//auto select the parent thread
+//					this.isDebuggerselected = false;
+//					String threadString = nv.getParent().getValue();
+//					this.selectedThread = String2Thread(threadString);
+//					GUI.getWatchpointAreaController().evalAll();
+					
 //					TreeItem<String> prevFrame = nv.previousSibling();
 //					if(prevFrame == null) {
 //						this.prevStackFrame = null;
