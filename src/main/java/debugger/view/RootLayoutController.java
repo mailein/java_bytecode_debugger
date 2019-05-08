@@ -397,7 +397,7 @@ public class RootLayoutController {
 		String relativeFileSourcepath = SourceClassConversion.mapFileSourcepath2relativeFileSourcepath(sourcepath,
 				fileSourcepath);
 		String cmd = "cd \'" + sourcepath + "\';"
-				+ "(javac \'" + relativeFileSourcepath + "\' || exit 100);"
+				+ "(javac -g \'" + relativeFileSourcepath + "\' || exit 100);"
 				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
 		// TODO UTF-8
 		processBuilder.command("bash", "-c", cmd);
