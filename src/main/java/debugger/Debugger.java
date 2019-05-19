@@ -80,7 +80,7 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-	private List<ThreadReference> suspendedThreads = new ArrayList<>();
+//	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
@@ -198,7 +198,7 @@ public class Debugger implements Runnable {
 					vmExit = true;
 				} else if (event instanceof BreakpointEvent) {
 					ThreadReference thread = ((BreakpointEvent) event).thread();
-					addToSuspended(thread);
+					toSuspendedStatus(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
@@ -214,7 +214,7 @@ public class Debugger implements Runnable {
 					}).start();
 				} else if (event instanceof StepEvent) {
 					ThreadReference thread = ((StepEvent) event).thread();
-					addToSuspended(thread);
+					toSuspendedStatus(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
@@ -364,9 +364,6 @@ public class Debugger implements Runnable {
 
 	private void updateGUI(Event event, ThreadReference thread, Location location, int lineNumber, long bci,
 			Method method, ReferenceType classRefType) {
-		// set selectedThread before updating watchpoints and localVar
-		GUI.getThreadAreaController().setSelectedThread(thread);
-
 		// finds also anonymous class
 		String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
 		if (!fileClasspath.isEmpty()) {
@@ -380,14 +377,18 @@ public class Debugger implements Runnable {
 		Platform.runLater(() -> {
 			// for line indicator
 			GUI.getCodeAreaController().setCurrLine(lineNumber);
+			// update thread status
+			GUI.getThreadAreaController().updateThreadsGraphic();
 			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 		});
 		// request watchpoints
 		requestWatchpoints(classRefType);
 		// watchpoint eval need loc info from event
-		this.currentEvent.put(thread, event);
+		this.currentEvent.put(thread, event); // update thread's event
 		Platform.runLater(() -> {
+			// set selectedThread before updating watchpoints and localVar
+			GUI.getThreadAreaController().setSelectedThread(thread);
 			// refresh watchpoints, localVar
 			GUI.getWatchpointAreaController().evalAll();
 			GUI.getLocalVarAreaController().refresh();
@@ -635,32 +636,32 @@ public class Debugger implements Runnable {
 	}
 
 	// return true for newly added, false for already in suspended list
-	private boolean addToSuspended(ThreadReference thread) {
-		if (!suspendedThreads.contains(thread)) {
-			suspendedThreads.add(thread);
-			Platform.runLater(() -> {
-				GUI.getThreadAreaController().setThreadGraphic(thread, true);
-			});
-			return true;
-		} else {
-			return false;
-		}
+	private void toSuspendedStatus(ThreadReference thread) {
+//		if (!suspendedThreads.contains(thread)) {
+//			suspendedThreads.add(thread);
+		Platform.runLater(() -> {
+			GUI.getThreadAreaController().setThreadGraphic(thread, true);
+		});
+//			return true;
+//		} else {
+//			return false;
+//		}
 	}
 
-	// return true for newly removed, false for already not/never in suspended list
-	public boolean removeFromSuspended(ThreadReference thread) {
-		boolean newlyRemoved = suspendedThreads.remove(thread);
-		if (newlyRemoved) {
-			Platform.runLater(() -> {
-				GUI.getThreadAreaController().setThreadGraphic(thread, false);
-			});
-		}
-		return newlyRemoved;
-	}
+//	// return true for newly removed, false for already not/never in suspended list
+//	public void toRunningStatus(ThreadReference thread) {
+////		boolean newlyRemoved = suspendedThreads.remove(thread);
+////		if (newlyRemoved) {
+//		Platform.runLater(() -> {
+//			GUI.getThreadAreaController().setThreadGraphic(thread, false);
+//		});
+////		}
+////		return newlyRemoved;
+//	}
 
-	public List<ThreadReference> getSuspendedThreads() {
-		return suspendedThreads;
-	}
+//	public List<ThreadReference> getSuspendedThreads() {
+//		return suspendedThreads;
+//	}
 
 	@Override
 	public void run() {

@@ -68,21 +68,26 @@ public class ThreadAreaController {
 				if (nv.getValue().contains(debuggerNameMarker)) {
 					this.isDebuggerselected = true;
 //					tree.getSelectionModel().selectNext();
-					//don't set selectedThread to null here! in case NullPointException
+					// don't set selectedThread to null here! in case NullPointException
 				}
 				if (nv.getValue().contains(threadNameMarker)) {
 					this.isDebuggerselected = false;
 					this.selectedThread = String2Thread(nv.getValue());
-					GUI.getWatchpointAreaController().evalAll();//
+					if (this.selectedThread.isSuspended()) {
+						GUI.getWatchpointAreaController().evalAll();
+						GUI.getLocalVarAreaController().refresh();
+					} else {
+						GUI.getLocalVarAreaController().clear();
+					}
 //					this.prevStackFrame = null;//current frame is top frame
 				}
 				if (nv.getValue().contains(stackNameMarker)) {
-					tree.getSelectionModel().select(nv.getParent());//auto select the parent thread
+					tree.getSelectionModel().select(nv.getParent());// auto select the parent thread
 //					this.isDebuggerselected = false;
 //					String threadString = nv.getParent().getValue();
 //					this.selectedThread = String2Thread(threadString);
 //					GUI.getWatchpointAreaController().evalAll();
-					
+
 //					TreeItem<String> prevFrame = nv.previousSibling();
 //					if(prevFrame == null) {
 //						this.prevStackFrame = null;
@@ -92,8 +97,8 @@ public class ThreadAreaController {
 //						System.out.println("prev frame is" + prevFrame.getValue());
 //					}
 				}
-				//update line indicator
-				if(selectedThread.isSuspended()) {
+				// update line indicator
+				if (selectedThread.isSuspended()) {
 					try {
 						StackFrame stackFrame = selectedThread.frame(0);
 						int lineNumber = stackFrame.location().lineNumber();
@@ -194,7 +199,7 @@ public class ThreadAreaController {
 	// update all suspended threads, running thread has no StackFrame
 	public void updateStackFrameBranches(ThreadReference eventThread) {
 		ObservableList<ThreadReference> threads = debugger.getThreads();
-		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
+//		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
 		for (ThreadReference thread : threads) {
 			// remove all old stackFrames for all threads
 			TreeItem<String> threadTreeItem = null;
@@ -214,7 +219,8 @@ public class ThreadAreaController {
 			stackFramesTreeItems.remove(thread);// data
 
 			// add stackFrame to suspended threads
-			if (suspendedThreads.contains(thread)) {
+//			if (suspendedThreads.contains(thread)) {
+			if (thread.isSuspended()) {
 				// add all current stackFrames for this thread
 				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
 				stackFramesTreeItems.put(thread, map);// data
@@ -312,13 +318,18 @@ public class ThreadAreaController {
 
 	public void setThreadGraphic(ThreadReference thread, boolean isSuspended) {
 		TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(thread), debuggerTreeItem);
-		if(isSuspended) {
+		if (isSuspended) {
 			threadTreeItem.setGraphic(getSuspendedIcon());
-		}else {
+		} else {
 			threadTreeItem.setGraphic(getRunningIcon());
 		}
 	}
-	
+
+	public void updateThreadsGraphic() {
+		ObservableList<ThreadReference> threads = debugger.getThreads();
+		threads.forEach(thread -> setThreadGraphic(thread, thread.isSuspended()));
+	}
+
 	// ----------getters------------//
 	public Debugger getRunningDebugger() {
 		if (!terminated)
@@ -333,7 +344,7 @@ public class ThreadAreaController {
 	public ThreadReference getSelectedThread() {
 		return selectedThread;
 	}
-	
+
 	public void setSelectedThread(ThreadReference thread) {
 		if (!terminated) {
 			String name = generateThreadName(thread);

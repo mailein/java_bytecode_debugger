@@ -74,4 +74,8 @@ public class LocalVarAreaController {
 		}
 	}
 
+	// for running threads
+	public void clear() {
+		localVars.clear();
+	}
 }

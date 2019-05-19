@@ -27,7 +27,7 @@ public class Watchpoint {// doesn't include local var
 	private SimpleStringProperty name;// global variable, if local get it from localVarAreaController
 	private SimpleStringProperty value;
 	private boolean requested = false;
-	
+
 	private ObservableList<HistoryRecord> history = FXCollections.observableArrayList();
 
 	public Watchpoint(String name) {
@@ -90,35 +90,40 @@ public class Watchpoint {// doesn't include local var
 		if (threadAreaController != null) {
 			Debugger debugger = threadAreaController.getRunningDebugger();
 			ThreadReference thread = threadAreaController.getSelectedThread();
-			if (debugger != null) {
+			if (debugger != null && thread.isSuspended()) {
 				Event currentEvent = debugger.getCurrentEvent().get(thread);
-				Location loc = null;
-				if (currentEvent instanceof BreakpointEvent) {
-					BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
-					loc = bpEvent.location();
-				}
-				if (currentEvent instanceof StepEvent) {
-					StepEvent stepEvent = (StepEvent) currentEvent;
-					loc = stepEvent.location();
-				}
-				if (loc != null) {
-					ReferenceType refType = loc.declaringType();
-					String withoutFieldName = stripOffFieldName();
-					if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
-							|| withoutFieldName.equals("")) {
-						Field field = refType.fieldByName(getName());
-						if (field != null)
-							setValue(refType.getValue(field).toString());
+				if (currentEvent != null) {
+					Location loc = null;
+					if (currentEvent instanceof BreakpointEvent) {
+						BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
+						loc = bpEvent.location();
+					}
+					if (currentEvent instanceof StepEvent) {
+						StepEvent stepEvent = (StepEvent) currentEvent;
+						loc = stepEvent.location();
+					}
+					if (loc != null) {
+						ReferenceType refType = loc.declaringType();
+						String withoutFieldName = stripOffFieldName();
+						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
+								|| withoutFieldName.equals("")) {
+							Field field = refType.fieldByName(getName());
+							if (field != null) {
+								setValue(refType.getValue(field).toString());
+							} else {
+								setValue("<Error>");
+							}
+						}
 					}
 				}
 			}
 		}
 	}
-	
+
 	public boolean getRequested() {
 		return this.requested;
 	}
-	
+
 	public void setRequested(boolean b) {
 		this.requested = b;
 	}
