@@ -340,7 +340,7 @@ public class Debugger implements Runnable {
 
 		updateGUI(event, thread, location, lineNumber, bci, method, classRefType);
 	}
-	
+
 	private void stepEventHandler(Event event) {
 		StepEvent stepEvent = (StepEvent) event;
 		ThreadReference thread = stepEvent.thread();
@@ -364,6 +364,9 @@ public class Debugger implements Runnable {
 
 	private void updateGUI(Event event, ThreadReference thread, Location location, int lineNumber, long bci,
 			Method method, ReferenceType classRefType) {
+		// set selectedThread before updating watchpoints and localVar
+		GUI.getThreadAreaController().setSelectedThread(thread);
+
 		// finds also anonymous class
 		String fileClasspath = SuspensionLocation.inProject(location, Paths.get(classpath), false);
 		if (!fileClasspath.isEmpty()) {
@@ -376,7 +379,7 @@ public class Debugger implements Runnable {
 		// TODO sometimes no indicator
 		Platform.runLater(() -> {
 			// for line indicator
-			GUI.getCodeAreaController().setCurrLine(lineNumber);	
+			GUI.getCodeAreaController().setCurrLine(lineNumber);
 			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
 		});
@@ -385,7 +388,7 @@ public class Debugger implements Runnable {
 		// watchpoint eval need loc info from event
 		this.currentEvent.put(thread, event);
 		Platform.runLater(() -> {
-			// refresh watchpoint, localVar
+			// refresh watchpoints, localVar
 			GUI.getWatchpointAreaController().evalAll();
 			GUI.getLocalVarAreaController().refresh();
 		});
@@ -647,7 +650,7 @@ public class Debugger implements Runnable {
 	// return true for newly removed, false for already not/never in suspended list
 	public boolean removeFromSuspended(ThreadReference thread) {
 		boolean newlyRemoved = suspendedThreads.remove(thread);
-		if(newlyRemoved) {
+		if (newlyRemoved) {
 			Platform.runLater(() -> {
 				GUI.getThreadAreaController().setThreadGraphic(thread, false);
 			});

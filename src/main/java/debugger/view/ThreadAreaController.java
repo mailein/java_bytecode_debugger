@@ -333,6 +333,14 @@ public class ThreadAreaController {
 	public ThreadReference getSelectedThread() {
 		return selectedThread;
 	}
+	
+	public void setSelectedThread(ThreadReference thread) {
+		if (!terminated) {
+			String name = generateThreadName(thread);
+			TreeItem<String> threadTreeItem = getTreeItem(name, debuggerTreeItem);
+			tree.getSelectionModel().select(threadTreeItem);
+		}
+	}
 
 //	public StackFrame getPrevStackFrame() {
 //		return prevStackFrame;
