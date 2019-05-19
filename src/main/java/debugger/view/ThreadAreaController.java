@@ -74,7 +74,7 @@ public class ThreadAreaController {
 					this.isDebuggerselected = false;
 					this.selectedThread = String2Thread(nv.getValue());
 					if (this.selectedThread.isSuspended()) {
-						GUI.getWatchpointAreaController().evalAll();
+//						GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
 						GUI.getLocalVarAreaController().refresh();
 					} else {
 						GUI.getLocalVarAreaController().clear();

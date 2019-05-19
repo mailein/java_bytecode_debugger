@@ -595,21 +595,13 @@ public class RootLayoutController {
 		ObservableList<ThreadReference> threads = currentDebugger.getThreads();
 		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
 		if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
-//			List<ThreadReference> suspendedThreads = currentDebugger.getSuspendedThreads();
-//			suspendedThreads.forEach(thread -> {
 			threads.forEach(thread -> {
 				if (thread.isSuspended()) {
 					currentDebugger.setSuspendCount(thread, 1);
 				}
 			});
-//			suspendedThreads.clear();
-			// resume after clearing all suspended threads,
-			// to prevent resumed thread get into bp/stepEvent so fast, added to
-			// suspendedThreads, but accidently removed by clear() here
 			currentDebugger.getVm().resume();// barrier?
 		} else if (selectedThread != null) {// selected thread resume
-//			if (currentDebugger.getSuspendedThreads().contains(selectedThread)) {
-//				currentDebugger.getSuspendedThreads().remove(selectedThread);
 			if (selectedThread.isSuspended()) {
 				currentDebugger.setSuspendCount(selectedThread, 0);
 			} else {// do nothing
@@ -689,8 +681,6 @@ public class RootLayoutController {
 //				e.printStackTrace();
 //			}
 //		}
-//		if (currentDebugger.getSuspendedThreads().contains(currentThread)) {
-//			currentDebugger.getSuspendedThreads().remove(currentThread);
 		if (currentThread.isSuspended()) {
 			StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 			stepi.execute();

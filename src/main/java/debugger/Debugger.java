@@ -21,7 +21,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
 import com.sun.jdi.Field;
-import com.sun.jdi.LocalVariable;
 import com.sun.jdi.Location;
 import com.sun.jdi.Method;
 import com.sun.jdi.ReferenceType;
@@ -80,7 +79,6 @@ public class Debugger implements Runnable {
 
 	private ThreadReference mainThread;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
-//	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
@@ -291,33 +289,52 @@ public class Debugger implements Runnable {
 			Field f = accessWatchpointEvent.field();
 			Value v = accessWatchpointEvent.valueCurrent();
 			Location location = accessWatchpointEvent.location();
-			ReferenceType refType = location.declaringType();
+			ReferenceType locationRefType = location.declaringType();
 			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
+			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, false, v, null, line, bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
-			int index = watchpoints.indexOf(new Watchpoint(f.name()));
-			Watchpoint wp = watchpoints.get(index);
-			wp.addHistoryRecord(record);
+			for (Watchpoint wp : watchpoints) {
+				if(wp.strip2fieldName().equals(f.name())) {
+					if((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name())) || 
+							wp.stripOffFieldName().isEmpty()) {
+						if(wp.getField() == null) {
+							wp.setField(f);
+						}
+						wp.addHistoryRecord(record);
+						break;
+					}
+				}
+			}
 			eventSet.resume();
 		} else if (event instanceof ModificationWatchpointEvent) {
 			ModificationWatchpointEvent modificationWatchpointEvent = (ModificationWatchpointEvent) event;
 			ThreadReference thread = modificationWatchpointEvent.thread();
-			Field f = modificationWatchpointEvent.field();
+			Field f = modificationWatchpointEvent.field();//f.declaringType() not necessarily location.declaringType()
 			Value currV = modificationWatchpointEvent.valueCurrent();
 			Value vToBe = modificationWatchpointEvent.valueToBe();
 			Location location = modificationWatchpointEvent.location();
-			ReferenceType refType = location.declaringType();
+			ReferenceType locationRefType = location.declaringType();//write happen in refType class
 			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, true, currV, vToBe, line,
+			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, true, currV, vToBe, line,
 					bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
-			int index = watchpoints.indexOf(new Watchpoint(f.name()));
-			Watchpoint wp = watchpoints.get(index);
-			wp.addHistoryRecord(record);
+			for (Watchpoint wp : watchpoints) {
+				if(wp.strip2fieldName().equals(f.name())) {
+					if((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name())) || 
+							wp.stripOffFieldName().isEmpty()) {
+						if(wp.getField() == null) {
+							wp.setField(f);
+						}
+						wp.addHistoryRecord(record);
+						wp.setValue(vToBe.toString());
+						break;
+					}
+				}
+			}
 			eventSet.resume();
 		} else {
 			eventSet.resume();
@@ -337,7 +354,7 @@ public class Debugger implements Runnable {
 		}
 		System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
 				+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
-
+		
 		updateGUI(event, thread, location, lineNumber, bci, method, classRefType);
 	}
 
@@ -390,7 +407,7 @@ public class Debugger implements Runnable {
 			// set selectedThread before updating watchpoints and localVar
 			GUI.getThreadAreaController().setSelectedThread(thread);
 			// refresh watchpoints, localVar
-			GUI.getWatchpointAreaController().evalAll();
+//			GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
 			GUI.getLocalVarAreaController().refresh();
 		});
 	}
@@ -637,31 +654,10 @@ public class Debugger implements Runnable {
 
 	// return true for newly added, false for already in suspended list
 	private void toSuspendedStatus(ThreadReference thread) {
-//		if (!suspendedThreads.contains(thread)) {
-//			suspendedThreads.add(thread);
 		Platform.runLater(() -> {
 			GUI.getThreadAreaController().setThreadGraphic(thread, true);
 		});
-//			return true;
-//		} else {
-//			return false;
-//		}
 	}
-
-//	// return true for newly removed, false for already not/never in suspended list
-//	public void toRunningStatus(ThreadReference thread) {
-////		boolean newlyRemoved = suspendedThreads.remove(thread);
-////		if (newlyRemoved) {
-//		Platform.runLater(() -> {
-//			GUI.getThreadAreaController().setThreadGraphic(thread, false);
-//		});
-////		}
-////		return newlyRemoved;
-//	}
-
-//	public List<ThreadReference> getSuspendedThreads() {
-//		return suspendedThreads;
-//	}
 
 	@Override
 	public void run() {

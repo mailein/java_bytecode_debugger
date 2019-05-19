@@ -27,6 +27,7 @@ public class Watchpoint {// doesn't include local var
 	private SimpleStringProperty name;// global variable, if local get it from localVarAreaController
 	private SimpleStringProperty value;
 	private boolean requested = false;
+	private Field field = null;
 
 	private ObservableList<HistoryRecord> history = FXCollections.observableArrayList();
 
@@ -85,6 +86,18 @@ public class Watchpoint {// doesn't include local var
 		return className;
 	}
 
+	public Field getField() {
+		return this.field;
+	}
+
+	public void setField(Field f) {
+		this.field = f;
+	}
+
+	// to see if the field is visible in this refType, but the field doesn't have to
+	// originate from this refType.
+	// eg. public static int a; //a line in class A
+	// A.a is visible in class B
 	public void eval() {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		if (threadAreaController != null) {
@@ -107,12 +120,12 @@ public class Watchpoint {// doesn't include local var
 						String withoutFieldName = stripOffFieldName();
 						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
 								|| withoutFieldName.equals("")) {
-							Field field = refType.fieldByName(getName());
-							if (field != null) {
-								setValue(refType.getValue(field).toString());
-							} else {
-								setValue("<Error>");
-							}
+//							Field field = refType.fieldByName(getName());//field doesn't need to originate from this class
+//							if (visible) {// TODO should base on field visibility, 
+//								setValue(refType.getValue(field).toString());
+//							} else {
+//								setValue("<Error>");
+//							}
 						}
 					}
 				}
