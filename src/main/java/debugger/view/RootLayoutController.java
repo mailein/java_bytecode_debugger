@@ -594,15 +594,18 @@ public class RootLayoutController {
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		ObservableList<ThreadReference> threads = currentDebugger.getThreads();
 		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
-		if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
+		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
+		if (threadAreaController.isDebuggerselected()) {// all threads resume
 			threads.forEach(thread -> {
 				if (thread.isSuspended()) {
 					currentDebugger.setSuspendCount(thread, 1);
+					threadAreaController.setThreadGraphic(thread, false);
 				}
 			});
 			currentDebugger.getVm().resume();// barrier?
 		} else if (selectedThread != null) {// selected thread resume
 			if (selectedThread.isSuspended()) {
+				threadAreaController.setThreadGraphic(selectedThread, false);
 				currentDebugger.setSuspendCount(selectedThread, 0);
 			} else {// do nothing
 					// TODO deactivate resume button ==> activate for other situations
@@ -684,6 +687,7 @@ public class RootLayoutController {
 		if (currentThread.isSuspended()) {
 			StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 			stepi.execute();
+			threadAreaController.setThreadGraphic(currentThread, false);
 			currentDebugger.setSuspendCount(currentThread, 0);
 		}
 	}

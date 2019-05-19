@@ -289,11 +289,11 @@ public class Debugger implements Runnable {
 			Field f = accessWatchpointEvent.field();
 			Value v = accessWatchpointEvent.valueCurrent();
 			Location location = accessWatchpointEvent.location();
-			ReferenceType locationRefType = location.declaringType();
+			ReferenceType refType = location.declaringType();
 			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, false, v, null, line, bci);
+			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
 			for (Watchpoint wp : watchpoints) {
 				if(wp.strip2fieldName().equals(f.name())) {
