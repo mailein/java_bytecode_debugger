@@ -77,7 +77,7 @@ public class Debugger implements Runnable {
 	private EventSet eventSet;
 	private boolean vmExit = false;
 
-	private ThreadReference mainThread;
+	private ThreadReference mainThread = null;
 	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
@@ -235,13 +235,12 @@ public class Debugger implements Runnable {
 	}
 
 	private void execute(Event event, boolean debugMode) {
-		if (event instanceof VMStartEvent) {
-			mainThread = ((VMStartEvent) event).thread(); // get mainThread of targetVM
-			System.out.println("--------\nVMStartEvent");
-			eventSet.resume();
-		} else if (event instanceof ThreadStartEvent) {
+		if (event instanceof ThreadStartEvent) {
 			ThreadReference thread = ((ThreadStartEvent) event).thread();
-			if (mainThread.threadGroup().equals(thread.threadGroup())) {
+			if(mainThread == null && thread.name().equals("main")) {
+				mainThread = thread;
+			}
+			if (mainThread != null && mainThread.threadGroup().equals(thread.threadGroup())) {
 				// to handle breakpoint/stepEvent
 				eventHandlerThreads.put(thread, new ReentrantLock());
 				// thread death
@@ -296,10 +295,11 @@ public class Debugger implements Runnable {
 			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
 			for (Watchpoint wp : watchpoints) {
-				if(wp.strip2fieldName().equals(f.name())) {
-					if((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name())) || 
+				if (wp.strip2fieldName().equals(f.name())) {
+					if ((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name()))
+							||
 							wp.stripOffFieldName().isEmpty()) {
-						if(wp.getField() == null) {
+						if (wp.getField() == null) {
 							wp.setField(f);
 						}
 						wp.addHistoryRecord(record);
@@ -311,22 +311,24 @@ public class Debugger implements Runnable {
 		} else if (event instanceof ModificationWatchpointEvent) {
 			ModificationWatchpointEvent modificationWatchpointEvent = (ModificationWatchpointEvent) event;
 			ThreadReference thread = modificationWatchpointEvent.thread();
-			Field f = modificationWatchpointEvent.field();//f.declaringType() not necessarily location.declaringType()
+			Field f = modificationWatchpointEvent.field();// f.declaringType() not necessarily location.declaringType()
 			Value currV = modificationWatchpointEvent.valueCurrent();
 			Value vToBe = modificationWatchpointEvent.valueToBe();
 			Location location = modificationWatchpointEvent.location();
-			ReferenceType locationRefType = location.declaringType();//write happen in refType class
+			ReferenceType locationRefType = location.declaringType();// write happen in refType class
 			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, true, currV, vToBe, line,
+			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, true, currV, vToBe,
+					line,
 					bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
 			for (Watchpoint wp : watchpoints) {
-				if(wp.strip2fieldName().equals(f.name())) {
-					if((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name())) || 
+				if (wp.strip2fieldName().equals(f.name())) {
+					if ((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name()))
+							||
 							wp.stripOffFieldName().isEmpty()) {
-						if(wp.getField() == null) {
+						if (wp.getField() == null) {
 							wp.setField(f);
 						}
 						wp.addHistoryRecord(record);
@@ -354,7 +356,7 @@ public class Debugger implements Runnable {
 		}
 		System.out.println("--------\nBreakpointEvent" + "\n(" + thread.name() + ")\n|" + method.name()
 				+ "\n|line: " + lineNumber + "\n|bci: " + bci + "\n|_");
-		
+
 		updateGUI(event, thread, location, lineNumber, bci, method, classRefType);
 	}
 
@@ -402,12 +404,12 @@ public class Debugger implements Runnable {
 		// request watchpoints
 		requestWatchpoints(classRefType);
 		// watchpoint eval need loc info from event
-		this.currentEvent.put(thread, event); // update thread's event
+		this.currentEvent.put(thread, event); // update thread's event, TODO see wp.eval()
 		Platform.runLater(() -> {
 			// set selectedThread before updating watchpoints and localVar
 			GUI.getThreadAreaController().setSelectedThread(thread);
 			// refresh watchpoints, localVar
-//			GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
+			GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
 			GUI.getLocalVarAreaController().refresh();
 		});
 	}
@@ -583,10 +585,6 @@ public class Debugger implements Runnable {
 
 	public ObservableMap<String, ReferenceType> getClasses() {
 		return classes;
-	}
-
-	public ThreadReference getMainThread() {
-		return mainThread;
 	}
 
 	public Map<ThreadReference, Event> getCurrentEvent() {

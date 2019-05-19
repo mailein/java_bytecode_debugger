@@ -98,7 +98,7 @@ public class Watchpoint {// doesn't include local var
 	// originate from this refType.
 	// eg. public static int a; //a line in class A
 	// A.a is visible in class B
-	public void eval() {
+	public void eval() {//TODO see below
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		if (threadAreaController != null) {
 			Debugger debugger = threadAreaController.getRunningDebugger();
@@ -118,14 +118,21 @@ public class Watchpoint {// doesn't include local var
 					if (loc != null) {
 						ReferenceType refType = loc.declaringType();
 						String withoutFieldName = stripOffFieldName();
-						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
-								|| withoutFieldName.equals("")) {
+						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))) {
 //							Field field = refType.fieldByName(getName());//field doesn't need to originate from this class
 //							if (visible) {// TODO should base on field visibility, 
 //								setValue(refType.getValue(field).toString());
 //							} else {
 //								setValue("<Error>");
 //							}
+						}
+						if(withoutFieldName.equals("")) {//same name under different classes
+							Field field = refType.fieldByName(getName());//field doesn't need to originate from this class
+							if (field != null) {// TODO should base on field visibility, 
+								setValue(refType.getValue(field).toString());
+							} else {
+								setValue("<Error>");
+							}
 						}
 					}
 				}
