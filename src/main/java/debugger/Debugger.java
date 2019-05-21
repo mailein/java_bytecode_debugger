@@ -237,7 +237,7 @@ public class Debugger implements Runnable {
 	private void execute(Event event, boolean debugMode) {
 		if (event instanceof ThreadStartEvent) {
 			ThreadReference thread = ((ThreadStartEvent) event).thread();
-			if(mainThread == null && thread.name().equals("main")) {
+			if (mainThread == null && thread.name().equals("main")) {
 				mainThread = thread;
 			}
 			if (mainThread != null && mainThread.threadGroup().equals(thread.threadGroup())) {
@@ -268,11 +268,13 @@ public class Debugger implements Runnable {
 				System.out.println("--------\nClassPrepareEvent\nclassName: " + className
 						+ "\nmethods: " + classRefType.methods());
 
-				// request breakpoints
-				addSetLineBreakpointsToDebugger(classRefType, className);
-
-				// request watchpoints
-				requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
+				if(debugMode) {
+					// request breakpoints
+					addSetLineBreakpointsToDebugger(classRefType, className);
+					
+					// request watchpoints
+					requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
+				}
 			}
 			eventSet.resume();
 		} else if (event instanceof ClassUnloadEvent) {
@@ -409,7 +411,7 @@ public class Debugger implements Runnable {
 			// set selectedThread before updating watchpoints and localVar
 			GUI.getThreadAreaController().setSelectedThread(thread);
 			// refresh watchpoints, localVar
-			GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
+			GUI.getWatchpointAreaController().evalAll();// TODO field visibility, see Watchpoint.eval()
 			GUI.getLocalVarAreaController().refresh();
 		});
 	}

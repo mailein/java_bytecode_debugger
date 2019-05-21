@@ -77,7 +77,7 @@ public class SourceClassConversion {
 		return fileSourcepath;
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) {//test
 		Path dir = Paths.get("/Users/m/", "/Desktop/debugger/countdownZuZweit/");
 		Path sourcepath = dir.resolve("src");
 		Path classpath = dir.resolve("bin");
