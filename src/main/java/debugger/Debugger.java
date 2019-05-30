@@ -197,31 +197,31 @@ public class Debugger implements Runnable {
 				} else if (event instanceof BreakpointEvent) {
 					ThreadReference thread = ((BreakpointEvent) event).thread();
 					toSuspendedStatus(thread);
-					new Thread(() -> {
-						Lock lock = eventHandlerThreads.get(thread);
-						try {
-							lock.lock();// after this threadRef's handled the last event
-							if (debugMode) {
-								breakpointEventHandler(event);
-							} else {
-								eventSet.resume();
-							}
-						} finally {
-							lock.unlock();
-						}
-					}).start();
+//					new Thread(() -> {
+//						Lock lock = eventHandlerThreads.get(thread);
+//						try {
+//							lock.lock();// after this threadRef's handled the last event
+					if (debugMode) {
+						breakpointEventHandler(event);
+					} else {
+						eventSet.resume();
+					}
+//						} finally {
+//							lock.unlock();
+//						}
+//					}).start();
 				} else if (event instanceof StepEvent) {
 					ThreadReference thread = ((StepEvent) event).thread();
 					toSuspendedStatus(thread);
-					new Thread(() -> {
-						Lock lock = eventHandlerThreads.get(thread);
-						try {
-							lock.lock();// after this threadRef's handled the last event
-							stepEventHandler(event);
-						} finally {
-							lock.unlock();
-						}
-					}).start();
+//					new Thread(() -> {
+//						Lock lock = eventHandlerThreads.get(thread);
+//						try {
+//							lock.lock();// after this threadRef's handled the last event
+					stepEventHandler(event);
+//						} finally {
+//							lock.unlock();
+//						}
+//					}).start();
 				} else {
 					execute(event, debugMode);
 
@@ -268,10 +268,10 @@ public class Debugger implements Runnable {
 				System.out.println("--------\nClassPrepareEvent\nclassName: " + className
 						+ "\nmethods: " + classRefType.methods());
 
-				if(debugMode) {
+				if (debugMode) {
 					// request breakpoints
 					addSetLineBreakpointsToDebugger(classRefType, className);
-					
+
 					// request watchpoints
 					requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
 				}
@@ -305,7 +305,7 @@ public class Debugger implements Runnable {
 							wp.setField(f);
 						}
 						wp.addHistoryRecord(record);
-						break;
+//						break;// in case multiple WP of the same name exist
 					}
 				}
 			}
@@ -335,7 +335,7 @@ public class Debugger implements Runnable {
 						}
 						wp.addHistoryRecord(record);
 						wp.setValue(vToBe.toString());
-						break;
+//						break;//// in case multiple WP of the same name exist
 					}
 				}
 			}
@@ -426,7 +426,14 @@ public class Debugger implements Runnable {
 				if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
 						|| withoutFieldName.equals("")) {
 					Field field = refType.fieldByName(fieldName);
-					if (field != null) {
+					// don't add a second WP of the same field
+					boolean[] existed = { false };
+					eventRequestManager.accessWatchpointRequests().forEach(accessWpReq -> {
+						if (accessWpReq.field().equals(field)) {
+							existed[0] = true;
+						}
+					});
+					if (field != null && !existed[0]) {
 						AccessWatchpointRequest accessRequest;
 						if (vm.canWatchFieldAccess()) {
 							accessRequest = eventRequestManager.createAccessWatchpointRequest(field);

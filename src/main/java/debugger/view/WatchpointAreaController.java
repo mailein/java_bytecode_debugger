@@ -71,7 +71,6 @@ public class WatchpointAreaController {
 					Button button = new Button("History");
 					@Override
 					public void updateItem(String item, boolean empty) {
-						button.setTooltip(new Tooltip("add watchpoints BEFORE debugging to enable history"));
 						super.updateItem(item, empty);
 						if (empty) {
 							setGraphic(null);
@@ -99,10 +98,13 @@ public class WatchpointAreaController {
 		addName.setMaxWidth(nameCol.getPrefWidth());
 		Button addButton = new Button("Add");
 		addButton.setOnAction(e -> {
-			Watchpoint wp = new Watchpoint(addName.getText());
-			watchpoints.add(wp);
-			addName.clear();
-			wp.eval();
+			String name = addName.getText();
+			if(!name.isEmpty()) {//can't add empty named watchpoint
+				Watchpoint wp = new Watchpoint(name);
+				watchpoints.add(wp);
+				addName.clear();
+				wp.eval();
+			}
 		});
 		HBox hbox = new HBox(3.0, tableLabel, addName, addButton);
 		hbox.setAlignment(Pos.CENTER_LEFT);
@@ -117,8 +119,6 @@ public class WatchpointAreaController {
 	}
 	
 	private void handleHistory(Watchpoint wp) {
-		Label historyTableLabel = new Label("History [" + wp.getName() + "]");
-		
 		TableColumn<HistoryRecord, String> nameCol = new TableColumn<>("Name");
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("nameProperty"));
 		nameCol.setSortable(false);
@@ -145,17 +145,24 @@ public class WatchpointAreaController {
 		
 		VBox historyVbox = new VBox(5.0);
 		historyVbox.setPadding(new Insets(5, 0, 0, 5));
-		historyVbox.getChildren().addAll(historyTableLabel, historyTable);
+		historyVbox.getChildren().addAll(historyTable);
 		historyTable.prefHeightProperty().bind(historyVbox.heightProperty());
 		
 		Scene scene = new Scene(historyVbox);
 		Stage stage = new Stage();
+		stage.setTitle("History [" + wp.getName() + "]");
 		stage.setScene(scene);
 		stage.show();
 	}
 
 	public ObservableList<Watchpoint> getWatchpoints() {
 		return watchpoints;
+	}
+	
+	public void clearHistory() {
+		watchpoints.forEach(wp -> {
+			wp.getHistory().clear();
+		});
 	}
 
 }

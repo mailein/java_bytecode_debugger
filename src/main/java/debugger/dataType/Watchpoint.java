@@ -1,9 +1,5 @@
 package debugger.dataType;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Field;
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;

@@ -74,7 +74,7 @@ public class LocalVarAreaController {
 		}
 	}
 
-	// for running threads
+	// for running threads or after debugger's terminated
 	public void clear() {
 		localVars.clear();
 	}

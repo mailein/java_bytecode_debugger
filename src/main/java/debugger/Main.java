@@ -17,7 +17,6 @@ public class Main {
 	public static void main(String[] args) {
 		newDebugger.addListener((obs, ov, nv) -> {
 			if(nv) {
-				//TODO clear output area
 				GUI.getOutputAreaController().clear();
 				newDebug();
 				newDebugger.set(false);
@@ -47,6 +46,10 @@ public class Main {
 					t.join();
 					rootController.enableRunOrDebug();
 					rootController.enableOrDisableButtons(true);
+					// clear view after each termination
+					GUI.getWatchpointAreaController().clearHistory();
+					GUI.getLocalVarAreaController().clear();
+					//TODO clear line indicator in CodeArea and BytecodeArea
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
