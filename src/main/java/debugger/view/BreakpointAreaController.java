@@ -40,7 +40,7 @@ public class BreakpointAreaController {
 	private Label tableLabel = new Label("Breakpoints");
 	private TableView<LineBreakpoint> table = new TableView<>();
 	private Button removeButton = new Button("Remove");
-	private Button removeAllButton = new Button("Remove All");;
+	private Button removeAllButton = new Button("Remove All");
 
 	private ObservableList<LineBreakpoint> breakpoints = FXCollections.observableArrayList();// +- by codeAreaController
 //	private List<LineBreakpoint> waiting = new ArrayList<>();// wrong! because there can be many debuggers
@@ -194,7 +194,7 @@ public class BreakpointAreaController {
 		return false;
 	}
 
-	public void removeLineBreakpointFromDebugger(EventRequestManager eventReqMgr, Location loc, LineBreakpoint linebp) {
+	private void removeLineBreakpointFromDebugger(EventRequestManager eventReqMgr, Location loc, LineBreakpoint linebp) {
 		List<BreakpointRequest> matchingBpReqs = eventReqMgr.breakpointRequests().stream()
 				.filter(req -> req.location().equals(loc)).collect(Collectors.toList());
 		eventReqMgr.deleteEventRequests(matchingBpReqs);

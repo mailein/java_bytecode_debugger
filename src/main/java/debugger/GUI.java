@@ -77,25 +77,6 @@ public class GUI extends Application {
 		}
 	}
 
-	/**
-	 * @param path: either "sourcepath" or "classpath"
-	 */
-	private GridPane pathRow(GridPane gridpane, int rowIndex, String path) {
-		Label pathLabel = new Label(path + ": ");
-		TextField pathTextField = new TextField();
-		pathTextField.setPrefWidth(300.0);
-//		pathTextField.prefColumnCountProperty().bind(pathTextField.textProperty().length());
-		pathTextField.textProperty().addListener((obs, ov, nv) -> {
-			if (path.equalsIgnoreCase("sourcepath")) {
-				setSourcepath(nv);
-//			}
-//			if (path.equalsIgnoreCase("classpath")) {
-				setClasspath(nv);//compile integrated, no need for classpath input
-			}
-		});
-		return gridpane;
-	}
-
 	private void setDefaultPath(boolean[] canStart) {
 		Label label = new Label("sourcepath:");
 		TextField textField = new TextField();

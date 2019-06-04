@@ -15,8 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
@@ -45,7 +43,6 @@ import com.sun.jdi.event.ThreadDeathEvent;
 import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
-import com.sun.jdi.event.VMStartEvent;
 import com.sun.jdi.request.AccessWatchpointRequest;
 import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
@@ -83,7 +80,7 @@ public class Debugger implements Runnable {
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
 	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// for watchpoint eval
-	private Map<ThreadReference, Lock> eventHandlerThreads = new HashMap<>();
+//	private Map<ThreadReference, Lock> eventHandlerThreads = new HashMap<>();
 
 	private String mainClassName;
 	private String sourcepath;
@@ -242,7 +239,7 @@ public class Debugger implements Runnable {
 			}
 			if (mainThread != null && mainThread.threadGroup().equals(thread.threadGroup())) {
 				// to handle breakpoint/stepEvent
-				eventHandlerThreads.put(thread, new ReentrantLock());
+//				eventHandlerThreads.put(thread, new ReentrantLock());
 				// thread death
 				ThreadDeathRequest threadDeathRequest = eventRequestManager.createThreadDeathRequest();
 				threadDeathRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);

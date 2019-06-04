@@ -84,6 +84,11 @@ public class BytecodeAreaController {
 			return triangle;
 		}
 	}
+	
+	//TODO when a thread is selected, line indicator in BytecodeArea should also change
+	public void setCurrBCI(long bci) {
+		
+	}
 
 	public void openFile(String pathname, Method method, int lineNumber, long bci) {
 		String bytecodePathname = pathname.replace(".class", ".bytecode");
