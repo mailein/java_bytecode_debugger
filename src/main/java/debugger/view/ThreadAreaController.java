@@ -10,8 +10,12 @@ import java.util.stream.Collectors;
 
 import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.Location;
+import com.sun.jdi.Method;
 import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
+import com.sun.jdi.event.BreakpointEvent;
+import com.sun.jdi.event.Event;
+import com.sun.jdi.event.StepEvent;
 
 import debugger.Debugger;
 import debugger.GUI;
@@ -74,8 +78,9 @@ public class ThreadAreaController {
 					this.isDebuggerselected = false;
 					this.selectedThread = String2Thread(nv.getValue());
 					if (this.selectedThread.isSuspended()) {
-						GUI.getWatchpointAreaController().evalAll();//TODO field visibility, see Watchpoint.eval()
-						GUI.getLocalVarAreaController().refresh();//TODO suspended when the loop is entered, running when refresh()
+						GUI.getWatchpointAreaController().evalAll();// TODO field visibility, see Watchpoint.eval()
+						GUI.getLocalVarAreaController().refresh();// TODO suspended when the loop is entered, running
+																	// when refresh()
 					} else {
 						GUI.getLocalVarAreaController().clear();
 					}
@@ -101,8 +106,12 @@ public class ThreadAreaController {
 				if (selectedThread.isSuspended()) {
 					try {
 						StackFrame stackFrame = selectedThread.frame(0);
-						int lineNumber = stackFrame.location().lineNumber();
-						GUI.getCodeAreaController().setCurrLine(lineNumber);
+						Location loc = stackFrame.location();
+						int lineNumber = loc.lineNumber();
+						GUI.getCodeAreaController().setCurrLine(lineNumber);// CodeArea
+						Method method = loc.method();
+						long bci = loc.codeIndex();
+						GUI.getBytecodeAreaController().refreshParagraphGraphicFactory(method, lineNumber, bci);// BytecodeArea
 					} catch (IncompatibleThreadStateException e) {
 						e.printStackTrace();
 					}

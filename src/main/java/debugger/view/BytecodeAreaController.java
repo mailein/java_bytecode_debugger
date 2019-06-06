@@ -48,6 +48,7 @@ public class BytecodeAreaController {
 	private CodeArea bytecodeArea = new CodeArea();
 	private List<Integer> fileIndices = new ArrayList<>();
 	private int indicator;
+	private Bytecode currentBytecode;
 
 	@FXML
 	private void initialize() {
@@ -85,14 +86,8 @@ public class BytecodeAreaController {
 		}
 	}
 	
-	//TODO when a thread is selected, line indicator in BytecodeArea should also change
-	public void setCurrBCI(long bci) {
-		
-	}
-
 	public void openFile(String pathname, Method method, int lineNumber, long bci) {
 		String bytecodePathname = pathname.replace(".class", ".bytecode");
-		boolean findMethod = false;
 		String content = "";
 		try {
 			Scanner scanner = new Scanner(new File(bytecodePathname));
@@ -106,14 +101,19 @@ public class BytecodeAreaController {
 		}
 		bytecodeArea.replaceText(content);
 
+		// Bytecode processing
+		currentBytecode = new Bytecode(content);
+		refreshParagraphGraphicFactory(method, lineNumber, bci);
+	}
+
+	//TODO when a thread is selected, line indicator in BytecodeArea should also change
+	public void refreshParagraphGraphicFactory(Method method, int lineNumber, long bci) {
+		List<MyMethod> mymethods = currentBytecode.getMethods();
+		// get line# -> BCI -> fileIndex
+		boolean findMethod = false;
 		String returnTypeName = method.returnTypeName();
 		String name = method.name();
 		List<String> argumentTypeNames = method.argumentTypeNames();
-
-		// Bytecode processing
-		Bytecode bc = new Bytecode(content);
-		List<MyMethod> mymethods = bc.getMethods();
-		// get line# -> BCI -> fileIndex
 		List<LineNumberTableEntry> tableEntries = null;
 		Map<Long, Integer> BCI2FileIndex = null;
 		for (MyMethod m : mymethods) {
