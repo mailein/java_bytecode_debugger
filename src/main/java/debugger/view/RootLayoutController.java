@@ -2,8 +2,13 @@ package debugger.view;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.ProcessBuilder.Redirect;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import com.sun.jdi.ThreadReference;
 import com.sun.jdi.request.EventRequest;
@@ -21,6 +26,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -29,6 +35,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
@@ -40,12 +47,17 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class RootLayoutController {
 	@FXML
@@ -120,7 +132,8 @@ public class RootLayoutController {
 		Platform.runLater(() -> {
 			this.compileButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F10),
 					() -> this.compileButton.fire());
-			this.runButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F11, KeyCombination.CONTROL_DOWN),
+			this.runButton.getScene().getAccelerators().put(
+					new KeyCodeCombination(KeyCode.F11, KeyCombination.CONTROL_DOWN),
 					() -> this.runButton.fire());
 			this.debugButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F11),
 					() -> this.debugButton.fire());
@@ -394,49 +407,113 @@ public class RootLayoutController {
 	private void handleCompile() {
 		ProcessBuilder processBuilder = new ProcessBuilder();
 		String sourcepath = GUI.getSourcepath().get();
-		String fileSourcepath = "";
+		String tmpFileSourcepath = "";
 		try {
-			fileSourcepath = GUI.getCodeAreaController().getFileOfSelectedTab().getCanonicalPath();
+			tmpFileSourcepath = GUI.getCodeAreaController().getFileOfSelectedTab().getCanonicalPath();
 		} catch (IOException e1) {
 			Alert alert = new Alert(AlertType.ERROR, "Selected tab must contain main method.", ButtonType.CLOSE);
 			alert.showAndWait();
 			e1.printStackTrace();
 			return;
 		}
-		String relativeFileSourcepath = SourceClassConversion.mapFileSourcepath2relativeFileSourcepath(sourcepath,
-				fileSourcepath);
-		String cmd = "cd \'" + sourcepath + "\';"
-				+ "(javac -g \'" + relativeFileSourcepath + "\' || exit 100);"
-				+ "if test $? -ne 100; then (for i in $(find . -name '*.class'); do tmp=$i; javap -c -l $i > ${tmp%.*}.bytecode; done || exit 2); else (exit 1); fi;";
-		// TODO UTF-8
-		processBuilder.command("bash", "-c", cmd);
+
+		Label label = new Label("Processing...");
+		label.setFont(new Font("Arial", 24));
+		VBox vbox = new VBox(5.0, label);
+		vbox.setAlignment(Pos.CENTER);
+		Scene scene = new Scene(vbox, 300, 100);
+		Stage stage = new Stage();
+		stage.setScene(scene);
+		stage.initStyle(StageStyle.UNDECORATED);
+		stage.initModality(Modality.APPLICATION_MODAL);
+		stage.show();
+
+		String fileSourcepath = tmpFileSourcepath;
+		CompletableFuture
+				.supplyAsync(() -> compileExecuteAsync(processBuilder, sourcepath, fileSourcepath))
+				.thenAcceptAsync(exitStatus -> {
+					if (exitStatus) {
+						Platform.runLater(() -> {//because CompletableFuture is not using GUI thread
+							stage.close();
+							Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
+							success.showAndWait();
+						});
+					}
+				});
+	}
+
+	private boolean compileExecuteAsync(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
+		boolean exitStatus = true;
+		// javac
+		processBuilder.command("javac", "-g", fileSourcepath);
+		processBuilder.directory(new File(sourcepath));// Sets this process builder's working directory
+		File log = new File("log");
+		try {
+			Files.writeString(log.toPath(), "", StandardOpenOption.TRUNCATE_EXISTING);
+		} catch (IOException e2) {
+			e2.printStackTrace();
+		}
+		processBuilder.redirectErrorStream(true);
+		processBuilder.redirectOutput(Redirect.appendTo(log));
+		exitStatus = exitStatus & startProcess(processBuilder, sourcepath, fileSourcepath);
+
+		// javap
+		File file = new File(fileSourcepath).getParentFile();
+		File[] classFiles = file.listFiles((dir, name) -> {
+			if (name.endsWith(".class")) {
+				return true;
+			} else {
+				return false;
+			}
+		});
+		for (int i = 0; i < classFiles.length; i++) {
+			String className = "";
+			try {
+				className = classFiles[i].getCanonicalPath();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			String bytecodeName = className.replace(".class", ".bytecode");
+			File bytecodeFile = new File(bytecodeName);
+			processBuilder.command("javap", "-c", "-l", className);
+			processBuilder.redirectErrorStream(true);
+			processBuilder.redirectOutput(Redirect.appendTo(bytecodeFile));
+			exitStatus = exitStatus & startProcess(processBuilder, sourcepath, className);
+		}
+
+		// read log
+		try {
+			String logString = Files.readString(log.toPath());
+			System.out.println(logString);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return exitStatus;
+	}
+
+	private boolean startProcess(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
 		try {
 			Process process = processBuilder.start();
 			int exitVal = process.waitFor();
-			if (exitVal == 0) {// TODO pop out a window
-				Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
-				success.showAndWait();
-			} else if (exitVal == 1) {
-				if (relativeFileSourcepath.isEmpty())
-					relativeFileSourcepath = "<empty>";
+			if (exitVal == 0) {
+				return true;
+			} else {
 				Alert failure = new Alert(AlertType.INFORMATION,
-						"Failure for javac! POSSIBLE wrong settings:"
+						"Failure for javac! Current settings:"
 								+ "\nSourcepath: " + sourcepath
-								+ "\nFile with main method: " + relativeFileSourcepath
-								+ "\n etc.",
-						ButtonType.CLOSE);
-				failure.showAndWait();
-			} else if (exitVal == 2) {
-				Alert failure = new Alert(AlertType.INFORMATION,
-						"Failure for javap, but it's unlikely. Please contact developer.\n",
+								+ "\nFile: " + fileSourcepath,
 						ButtonType.CLOSE);
 				failure.showAndWait();
 			}
+			process.destroy();
+			System.out.println(processBuilder.command());
+			System.out.println(exitVal);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		return false;
 	}
 
 	private void updateGUIpath(TextArea sourcepathTextArea, TextArea classpathTextArea) {
