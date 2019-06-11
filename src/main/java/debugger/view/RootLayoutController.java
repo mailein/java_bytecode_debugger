@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -443,6 +445,7 @@ public class RootLayoutController {
 	}
 
 	private boolean compileExecuteAsync(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
+		Instant t1 = Instant.now();
 		boolean exitStatus = true;
 		// javac
 		processBuilder.command("javac", "-g", fileSourcepath);
@@ -488,6 +491,10 @@ public class RootLayoutController {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		Instant t2 = Instant.now();
+		long gap = Duration.between(t1, t2).toSeconds();
+		System.out.println("time for javac javap: " + gap);
 		return exitStatus;
 	}
 
