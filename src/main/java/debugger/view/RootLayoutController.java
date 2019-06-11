@@ -433,20 +433,29 @@ public class RootLayoutController {
 		String fileSourcepath = tmpFileSourcepath;
 		CompletableFuture
 				.supplyAsync(() -> compileExecuteAsync(processBuilder, sourcepath, fileSourcepath))
-				.thenAcceptAsync(exitStatus -> {
-					if (exitStatus) {
-						Platform.runLater(() -> {//because CompletableFuture is not using GUI thread
+				.thenAcceptAsync(commands -> {
+					if (commands.isEmpty()) {
+						Platform.runLater(() -> {// because CompletableFuture is not using GUI thread
 							stage.close();
 							Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
 							success.showAndWait();
 						});
+					}else {
+						Alert failure = new Alert(AlertType.INFORMATION,
+								"Failure for " + commands
+										+ "\nSourcepath: " + sourcepath
+										+ "\nmain file: " + fileSourcepath,
+								ButtonType.CLOSE);
+						failure.showAndWait();
 					}
 				});
 	}
 
-	private boolean compileExecuteAsync(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
+	/**
+	 * @return failed commands or empty if all succeeded 
+	 */
+	private String compileExecuteAsync(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
 		Instant t1 = Instant.now();
-		boolean exitStatus = true;
 		// javac
 		processBuilder.command("javac", "-g", fileSourcepath);
 		processBuilder.directory(new File(sourcepath));// Sets this process builder's working directory
@@ -458,8 +467,11 @@ public class RootLayoutController {
 		}
 		processBuilder.redirectErrorStream(true);
 		processBuilder.redirectOutput(Redirect.appendTo(log));
-		exitStatus = exitStatus & startProcess(processBuilder, sourcepath, fileSourcepath);
-
+		String command = startProcess(processBuilder);
+		if(!command.isEmpty()) {
+			return command;
+		}
+		
 		// javap
 		File file = new File(fileSourcepath).getParentFile();
 		File[] classFiles = file.listFiles((dir, name) -> {
@@ -470,18 +482,21 @@ public class RootLayoutController {
 			}
 		});
 		for (int i = 0; i < classFiles.length; i++) {
-			String className = "";
+			String classFilePath = "";
 			try {
-				className = classFiles[i].getCanonicalPath();
+				classFilePath = classFiles[i].getCanonicalPath();
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			String bytecodeName = className.replace(".class", ".bytecode");
+			String bytecodeName = classFilePath.replace(".class", ".bytecode");
 			File bytecodeFile = new File(bytecodeName);
-			processBuilder.command("javap", "-c", "-l", className);
+			processBuilder.command("javap", "-c", "-l", classFilePath);
 			processBuilder.redirectErrorStream(true);
 			processBuilder.redirectOutput(Redirect.appendTo(bytecodeFile));
-			exitStatus = exitStatus & startProcess(processBuilder, sourcepath, className);
+			String tmp = startProcess(processBuilder);
+			if(!tmp.isEmpty()) {
+				command += tmp + "\n";
+			}
 		}
 
 		// read log
@@ -491,36 +506,28 @@ public class RootLayoutController {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		Instant t2 = Instant.now();
 		long gap = Duration.between(t1, t2).toSeconds();
 		System.out.println("time for javac javap: " + gap);
-		return exitStatus;
+		return command.strip();
 	}
 
-	private boolean startProcess(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
+	private String startProcess(ProcessBuilder processBuilder) {
 		try {
 			Process process = processBuilder.start();
 			int exitVal = process.waitFor();
-			if (exitVal == 0) {
-				return true;
-			} else {
-				Alert failure = new Alert(AlertType.INFORMATION,
-						"Failure for javac! Current settings:"
-								+ "\nSourcepath: " + sourcepath
-								+ "\nFile: " + fileSourcepath,
-						ButtonType.CLOSE);
-				failure.showAndWait();
-			}
 			process.destroy();
-			System.out.println(processBuilder.command());
-			System.out.println(exitVal);
+			if (exitVal == 0) {
+				return "";
+			}
+			System.out.println(processBuilder.command() + "'s exit status: " + exitVal);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		return false;
+		return "" + processBuilder.command();
 	}
 
 	private void updateGUIpath(TextArea sourcepathTextArea, TextArea classpathTextArea) {

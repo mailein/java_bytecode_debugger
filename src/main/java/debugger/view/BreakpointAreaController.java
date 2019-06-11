@@ -147,7 +147,7 @@ public class BreakpointAreaController {
 
 	/**
 	 * @param dbg
-	 * @param        className: normal class or prefix of anonymous class
+	 * @param className: normal class or prefix of anonymous class
 	 * @param linebp
 	 */
 	private void addLineBreakpointToDebugger(Debugger dbg, String className, LineBreakpoint linebp) {
