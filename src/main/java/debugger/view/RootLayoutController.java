@@ -10,6 +10,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.sun.jdi.ThreadReference;
@@ -20,6 +21,7 @@ import com.sun.jdi.request.StepRequest;
 import debugger.Debugger;
 import debugger.GUI;
 import debugger.Main;
+import debugger.dataType.Bytecode;
 import debugger.dataType.Configuration;
 import debugger.misc.BytecodePrefix;
 import debugger.misc.SourceClassConversion;
@@ -440,7 +442,12 @@ public class RootLayoutController {
 							Alert success = new Alert(AlertType.INFORMATION, "Success", ButtonType.CLOSE);
 							success.showAndWait();
 						});
-					}else {
+						// process bytecode for all *.bytecode
+						BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
+						Map<String, Bytecode> bytecodeMap = bytecodeAreaController.getBytecodeMap();
+						bytecodeMap.keySet().forEach(pathname -> bytecodeAreaController.content2Bytecode(pathname));
+					} else {
+						GUI.getBytecodeAreaController().getBytecodeMap().clear();
 						Alert failure = new Alert(AlertType.INFORMATION,
 								"Failure for " + commands
 										+ "\nSourcepath: " + sourcepath
@@ -452,7 +459,7 @@ public class RootLayoutController {
 	}
 
 	/**
-	 * @return failed commands or empty if all succeeded 
+	 * @return failed commands or empty if all succeeded
 	 */
 	private String compileExecuteAsync(ProcessBuilder processBuilder, String sourcepath, String fileSourcepath) {
 		Instant t1 = Instant.now();
@@ -468,10 +475,10 @@ public class RootLayoutController {
 		processBuilder.redirectErrorStream(true);
 		processBuilder.redirectOutput(Redirect.appendTo(log));
 		String command = startProcess(processBuilder);
-		if(!command.isEmpty()) {
+		if (!command.isEmpty()) {
 			return command;
 		}
-		
+
 		// javap
 		File file = new File(fileSourcepath).getParentFile();
 		File[] classFiles = file.listFiles((dir, name) -> {
@@ -489,12 +496,16 @@ public class RootLayoutController {
 				e1.printStackTrace();
 			}
 			String bytecodeName = classFilePath.replace(".class", ".bytecode");
+			// add to bytecode map with empty Bytecode
+			BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
+			bytecodeAreaController.getBytecodeMap().put(bytecodeName, null);
+
 			File bytecodeFile = new File(bytecodeName);
 			processBuilder.command("javap", "-c", "-l", classFilePath);
 			processBuilder.redirectErrorStream(true);
 			processBuilder.redirectOutput(Redirect.appendTo(bytecodeFile));
 			String tmp = startProcess(processBuilder);
-			if(!tmp.isEmpty()) {
+			if (!tmp.isEmpty()) {
 				command += tmp + "\n";
 			}
 		}

@@ -2,8 +2,8 @@ package debugger.view;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.nio.file.PathMatcher;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -12,18 +12,15 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import com.sun.jdi.Method;
 
-import debugger.GUI;
 import debugger.dataType.Bytecode;
 import debugger.dataType.Bytecode.LineNumberTableEntry;
 import debugger.dataType.Bytecode.MyMethod;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -32,9 +29,6 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
@@ -49,6 +43,8 @@ public class BytecodeAreaController {
 	private List<Integer> fileIndices = new ArrayList<>();
 	private int indicator;
 	private Bytecode currentBytecode;
+	private Map<String, Bytecode> bytecodeMap = new HashMap<>();// <*.bytecode, Bytecode> and all Bytecode are processed
+																// in compile functionality
 
 	@FXML
 	private void initialize() {
@@ -65,7 +61,8 @@ public class BytecodeAreaController {
 		@Override
 		public Node apply(int value) {
 			Label label = new Label();
-			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));//see no words when scroll right
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));// see no words when scroll
+																							// right
 			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
 			Rectangle square = new Rectangle(10.0, 10.0, Color.ORANGE);
 			label.setGraphic(square);
@@ -85,7 +82,27 @@ public class BytecodeAreaController {
 			return triangle;
 		}
 	}
-	
+
+	// called once the compile button is clicked
+	public void content2Bytecode(String pathname) {// pathname: *.class or *.bytecode
+		String bytecodePathname = pathname.contains(".bytecode") ? pathname : pathname.replace(".class", ".bytecode");
+		String content = "";
+		try {
+			Scanner scanner = new Scanner(new File(bytecodePathname));
+			content = scanner.useDelimiter("\\Z").next();
+			scanner.close();
+		} catch (NoSuchElementException e) {
+			content = "";
+		} catch (FileNotFoundException e) {
+			System.out.println("It's alright, no corresponding bytecode means this class file is not in the project.");
+//			e.printStackTrace();
+		}
+
+		// Bytecode processing
+		Bytecode bc = new Bytecode(content);
+		bytecodeMap.put(bytecodePathname, bc);
+	}
+
 	public void openFile(String pathname, Method method, int lineNumber, long bci) {
 		String bytecodePathname = pathname.replace(".class", ".bytecode");
 		String content = "";
@@ -102,11 +119,12 @@ public class BytecodeAreaController {
 		bytecodeArea.replaceText(content);
 
 		// Bytecode processing
-		currentBytecode = new Bytecode(content);
+		currentBytecode = bytecodeMap.get(bytecodePathname);
 		refreshParagraphGraphicFactory(method, lineNumber, bci);
 	}
 
-	//TODO when a thread is selected, line indicator in BytecodeArea should also change
+	// TODO when a thread is selected, line indicator in BytecodeArea should also
+	// change
 	public void refreshParagraphGraphicFactory(Method method, int lineNumber, long bci) {
 		List<MyMethod> mymethods = currentBytecode.getMethods();
 		// get line# -> BCI -> fileIndex
@@ -151,5 +169,9 @@ public class BytecodeAreaController {
 			return hBox;
 		};
 		bytecodeArea.setParagraphGraphicFactory(graphicFactory);
+	}
+
+	public Map<String, Bytecode> getBytecodeMap() {
+		return this.bytecodeMap;
 	}
 }
