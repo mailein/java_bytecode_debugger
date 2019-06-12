@@ -77,7 +77,7 @@ public class CodeAreaController {
 	private Map<Tab, File> tabsWithFile = new HashMap<Tab, File>();
 	private Tab selectedTab = null;
 	private CodeArea selectedCodeArea = null;
-	private IntegerProperty currLine = new SimpleIntegerProperty();//always relative to selectedTab's file
+	private IntegerProperty currLine = new SimpleIntegerProperty();// always relative to selectedTab's file
 
 	class BreakpointFactory implements IntFunction<Node> {
 		@Override
@@ -92,8 +92,12 @@ public class CodeAreaController {
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
-					toggleLineBreakpoint(lineNumber, circle);
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+					int newLineNumber = toggleLineBreakpoint(lineNumber, circle);
+					if(newLineNumber != lineNumber) {//set bp to next executable line
+						refreshParagraphGraphicFactory(-1, getCurrLine());
+					}
+				}
 			});
 			return label;
 		}
@@ -123,7 +127,7 @@ public class CodeAreaController {
 		}
 	}
 
-	private void toggleLineBreakpoint(int lineNumber, Circle circle) {
+	private int toggleLineBreakpoint(int lineNumber, Circle circle) {
 		boolean visible = circle.isVisible();
 		circle.setVisible(!visible);
 		String fileSourcepath = "";
@@ -135,8 +139,14 @@ public class CodeAreaController {
 		if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
 			GUI.getBreakpointAreaController().getBreakpoints()
 					.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+			return lineNumber;
 		} else {// add breakpoint
-			GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+			int newLineNumber = GUI.getBytecodeAreaController().nextExecutableLine(fileSourcepath, lineNumber + 1);
+			GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, newLineNumber));
+			if(newLineNumber != lineNumber + 1) {//not exact match, shall find next executable line
+				circle.setVisible(false);
+			}
+			return newLineNumber - 1;
 		}
 	}
 
@@ -242,8 +252,12 @@ public class CodeAreaController {
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
-					toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
+				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+					int newLineNumber = toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
+					if(newLineNumber != line) {//set bp to next executable line
+						refreshParagraphGraphicFactory(-1, getCurrLine());
+					}
+				}
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);

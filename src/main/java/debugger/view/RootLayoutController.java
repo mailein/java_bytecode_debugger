@@ -480,22 +480,10 @@ public class RootLayoutController {
 		}
 
 		// javap
-		File file = new File(fileSourcepath).getParentFile();
-		File[] classFiles = file.listFiles((dir, name) -> {
-			if (name.endsWith(".class")) {
-				return true;
-			} else {
-				return false;
-			}
-		});
-		for (int i = 0; i < classFiles.length; i++) {
-			String classFilePath = "";
-			try {
-				classFilePath = classFiles[i].getCanonicalPath();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-			String bytecodeName = classFilePath.replace(".class", ".bytecode");
+		List<String> bytecodeFiles = GUI.getBytecodeAreaController().getBytecodeFiles(fileSourcepath);
+		for (int i = 0; i < bytecodeFiles.size(); i++) {
+			String bytecodeName = bytecodeFiles.get(i);
+			String classFilePath = bytecodeName.replace(".bytecode", ".class");
 			// add to bytecode map with empty Bytecode
 			BytecodeAreaController bytecodeAreaController = GUI.getBytecodeAreaController();
 			bytecodeAreaController.getBytecodeMap().put(bytecodeName, null);

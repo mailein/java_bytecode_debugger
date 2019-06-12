@@ -2,6 +2,7 @@ package debugger.view;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -173,5 +174,77 @@ public class BytecodeAreaController {
 
 	public Map<String, Bytecode> getBytecodeMap() {
 		return this.bytecodeMap;
+	}
+
+	public List<String> getBytecodeFiles(String fileSourcepath) {
+		File file = new File(fileSourcepath).getParentFile();
+		File[] classFiles = file.listFiles((dir, name) -> {
+			if (name.endsWith(".class")) {
+				return true;
+			} else {
+				return false;
+			}
+		});
+		List<String> bytecodeFiles = new ArrayList<>();
+		for (int i = 0; i < classFiles.length; i++) {
+			String classFilePath = "";
+			try {
+				classFilePath = classFiles[i].getCanonicalPath();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			bytecodeFiles.add(classFilePath.replace(".class", ".bytecode"));
+		}
+		return bytecodeFiles;
+	}
+	
+	
+	/**
+	 * @param fileSourcepath *.java file in the tab
+	 */
+	public int nextExecutableLine(String fileSourcepath, int lineNumber) {
+		//if user doesn't click compile, no bytecodeMap available, generate here!
+		List<String> bytecodeFiles = getBytecodeFiles(fileSourcepath);
+		for(int i = 0; i < bytecodeFiles.size(); i++) {
+			String bytecodeName = bytecodeFiles.get(i);
+			content2Bytecode(bytecodeName);
+		}
+		
+		// all Bytecode objects under this name
+		String toSearch1 = fileSourcepath.substring(0, fileSourcepath.indexOf(".java")) + ".bytecode";
+		String toSearch2 = fileSourcepath.substring(0, fileSourcepath.indexOf(".java")) + "$";
+		List<String> matchingKeys = bytecodeMap.keySet().stream()
+				.filter(bytecodeFilePath -> (bytecodeFilePath.equals(toSearch1)
+						|| bytecodeFilePath.startsWith(toSearch2)))
+				.collect(Collectors.toList());
+		// all methods
+		List<MyMethod> allMethods = new ArrayList<>();
+		matchingKeys.forEach(bytecodeFilePath -> {
+			allMethods.addAll(bytecodeMap.get(bytecodeFilePath).getMethods());
+		});
+		// all lineNumberTableEntry per method
+		int[] minNextLine = { Integer.MAX_VALUE };
+		boolean[] exactMatch = { false };
+		for (MyMethod myMethod : allMethods) {
+			List<LineNumberTableEntry> entries = myMethod.getTableEntries();
+			for (LineNumberTableEntry entry : entries) {
+				int entryLine = entry.getLineNumber();
+				if (entryLine == lineNumber) {
+					exactMatch[0] = true;
+					break;
+				} else if (entryLine > lineNumber && entryLine < minNextLine[0]) {
+					minNextLine[0] = entryLine;
+				}
+			}
+			if (exactMatch[0]) {
+				break;
+			}
+		}
+		// case 1. exact match; case 2. MAX_VALUE (no entryLine#>line#)
+		if (exactMatch[0] || minNextLine[0] == Integer.MAX_VALUE) {
+			return lineNumber;
+		}
+		// case 3. min{entryLine#|entryLine#>line#}
+		return minNextLine[0];
 	}
 }
