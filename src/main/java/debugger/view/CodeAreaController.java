@@ -92,12 +92,7 @@ public class CodeAreaController {
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-					int newLineNumber = toggleLineBreakpoint(lineNumber, circle);
-					if(newLineNumber != lineNumber) {//set bp to next executable line
-						refreshParagraphGraphicFactory(-1, getCurrLine());
-					}
-				}
+				toggleLineBreakpoint(click, lineNumber, circle);
 			});
 			return label;
 		}
@@ -127,26 +122,34 @@ public class CodeAreaController {
 		}
 	}
 
-	private int toggleLineBreakpoint(int lineNumber, Circle circle) {
-		boolean visible = circle.isVisible();
-		circle.setVisible(!visible);
-		String fileSourcepath = "";
-		try {
-			fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
-			GUI.getBreakpointAreaController().getBreakpoints()
-					.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-			return lineNumber;
-		} else {// add breakpoint
-			int newLineNumber = GUI.getBytecodeAreaController().nextExecutableLine(fileSourcepath, lineNumber + 1);
-			GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, newLineNumber));
-			if(newLineNumber != lineNumber + 1) {//not exact match, shall find next executable line
-				circle.setVisible(false);
+	private void toggleLineBreakpoint(MouseEvent click, int lineNumber, Circle circle) {
+		if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+			// get fileSourcepath
+			String fileSourcepath = "";
+			try {
+				fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-			return newLineNumber - 1;
+
+			// add / remove breakpoint based on if there's already a bp on !!newLineNumber!!
+			// NOT based on current lineNumber!!
+			int newLineNumber = GUI.getBytecodeAreaController().nextExecutableLine(fileSourcepath, lineNumber + 1);
+			boolean bpInNewLine = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, newLineNumber);
+			if (bpInNewLine) {// remove breakpoint, eg. line 0 here is line 1 in debugger
+				GUI.getBreakpointAreaController().getBreakpoints()
+						.remove(new LineBreakpoint(fileSourcepath, newLineNumber));
+			} else {// add breakpoint
+				GUI.getBreakpointAreaController().getBreakpoints()
+						.add(new LineBreakpoint(fileSourcepath, newLineNumber));
+			}
+
+			// circle visible / not visible for newLineNumber
+			if (newLineNumber != lineNumber + 1) {// visible(next executable line) = existBp(next executable line)
+				refreshParagraphGraphicFactory(-1, getCurrLine());
+			} else { // visible(current lineNumber)
+				circle.setVisible(!bpInNewLine);
+			}
 		}
 	}
 
@@ -252,12 +255,7 @@ public class CodeAreaController {
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
-					int newLineNumber = toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
-					if(newLineNumber != line) {//set bp to next executable line
-						refreshParagraphGraphicFactory(-1, getCurrLine());
-					}
-				}
+				toggleLineBreakpoint(click, line, (Circle) ((Label) bp).getGraphic());
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);
