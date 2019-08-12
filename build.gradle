@@ -33,6 +33,14 @@ dependencies {
     implementation 'org.openjfx:javafx-controls:11.0.1:win'
     implementation 'org.openjfx:javafx-fxml:11.0.1:win'
     implementation 'org.openjfx:javafx-graphics:11.0.1:win'
+	implementation 'org.openjfx:javafx-base:11.0.1:linux'
+    implementation 'org.openjfx:javafx-controls:11.0.1:linux'
+    implementation 'org.openjfx:javafx-fxml:11.0.1:linux'
+    implementation 'org.openjfx:javafx-graphics:11.0.1:linux'
+	implementation 'org.openjfx:javafx-base:11.0.1:mac'
+    implementation 'org.openjfx:javafx-controls:11.0.1:mac'
+    implementation 'org.openjfx:javafx-fxml:11.0.1:mac'
+    implementation 'org.openjfx:javafx-graphics:11.0.1:mac'
     
     
 }

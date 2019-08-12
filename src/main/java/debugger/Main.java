@@ -1,4 +1,5 @@
 package debugger;
+
 import debugger.view.RootLayoutController;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
@@ -13,10 +14,10 @@ public class Main {
 	private static boolean debugModeArg;
 
 	private static BooleanProperty newDebugger = new SimpleBooleanProperty(false);
-	
+
 	public static void main(String[] args) {
 		newDebugger.addListener((obs, ov, nv) -> {
-			if(nv) {
+			if (nv) {
 				GUI.getOutputAreaController().clear();
 				newDebug();
 				newDebugger.set(false);
@@ -29,12 +30,12 @@ public class Main {
 	}
 
 	private static void newDebug() {
-		//should use Task instead of Thread, so it will run background
-		//and this thread wait won't cause UI thread to block!!!
 		Task<Void> task = new Task<Void>() {
 			@Override
 			protected Void call() throws Exception {
-				Debugger debugger = new Debugger(mainClassArg, sourcepathArg, classpathArg, debugModeArg);// TODO add progArg to
+				Debugger debugger = new Debugger(mainClassArg, sourcepathArg, classpathArg, debugModeArg);// TODO add
+																											// progArg
+																											// to
 				Thread t = new Thread(debugger);
 				GUI.getThreadAreaController().removeTerminatedDebugger();
 				GUI.getThreadAreaController().addDebugger(debugger);
@@ -43,13 +44,14 @@ public class Main {
 				rootController.disableRunOrDebug();
 				rootController.enableOrDisableButtons(false);
 				try {
-					t.join();
+					t.join();// without Task outside debugger Thread: GUI thread starts a debugger Thread and
+								// waits for it to terminate per t.join(); That's why GUI thread is blocking!!
 					rootController.enableRunOrDebug();
 					rootController.enableOrDisableButtons(true);
 					// clear view after each termination
 					GUI.getWatchpointAreaController().clearHistory();
 					GUI.getLocalVarAreaController().clear();
-					//TODO clear line indicator in CodeArea and BytecodeArea
+					// TODO clear line indicator in CodeArea and BytecodeArea
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -83,6 +85,5 @@ public class Main {
 	public static BooleanProperty getNewDebugger() {
 		return newDebugger;
 	}
-	
-	
+
 }

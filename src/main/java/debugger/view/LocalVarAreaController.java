@@ -50,27 +50,29 @@ public class LocalVarAreaController {
 	public void refresh() {
 		localVars.clear();
 		ThreadReference thread = GUI.getThreadAreaController().getSelectedThread();
-		try {
-			StackFrame currFrame = thread.frame(0);
-			Location currFrameLocation = currFrame.location();
-			boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
-			if (suspendAtSelectedTab) {
-				List<LocalVariable> locals = null;
-				try {
-					locals = currFrame.visibleVariables();
-					locals.forEach(local -> {
-						Value value = currFrame.getValue(local);
-						localVars.add(new LocalVar(local.name(), value.toString()));
-					});
-				} catch (AbsentInformationException e) {
-					System.out.println("It's alright, there is no local variable information for this method.");
+		if (thread.isSuspended()) {
+			try {
+				StackFrame currFrame = thread.frame(0);
+				Location currFrameLocation = currFrame.location();
+				boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
+				if (suspendAtSelectedTab) {
+					List<LocalVariable> locals = null;
+					try {
+						locals = currFrame.visibleVariables();
+						locals.forEach(local -> {
+							Value value = currFrame.getValue(local);
+							localVars.add(new LocalVar(local.name(), value.toString()));
+						});
+					} catch (AbsentInformationException e) {
+						System.out.println("It's alright, there is no local variable information for this method.");
 //					e.printStackTrace();
+					}
 				}
+			} catch (IncompatibleThreadStateException e) {
+				e.printStackTrace();
+			} catch (IndexOutOfBoundsException e) {
+				// frame index
 			}
-		} catch (IncompatibleThreadStateException e) {
-			e.printStackTrace();
-		}catch (IndexOutOfBoundsException e) {
-			//frame index
 		}
 	}
 

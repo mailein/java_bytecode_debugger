@@ -207,52 +207,61 @@ public class ThreadAreaController {
 
 	// update all suspended threads, running thread has no StackFrame
 	public void updateStackFrameBranches(ThreadReference eventThread) {
-		ObservableList<ThreadReference> threads = debugger.getThreads();
-//		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
-		for (ThreadReference thread : threads) {
-			// remove all old stackFrames for all threads
-			TreeItem<String> threadTreeItem = null;
-			try {
-				threadsTreeItemsLock.lock();// on Debugger thread now
-				while (!threadsTreeItems.containsKey(thread)) {
-					addedThread.await();
-				}
-				threadTreeItem = threadsTreeItems.get(thread);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} finally {
-				threadsTreeItemsLock.unlock();
-			}
-			System.out.println("contains thread " + thread.name() + ": " + threadsTreeItems.containsKey(thread));
-			threadTreeItem.getChildren().clear();// view
-			stackFramesTreeItems.remove(thread);// data
+//		ObservableList<ThreadReference> threads = debugger.getThreads();
+////		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
+//		for (ThreadReference thread : threads) {
+//			// remove stackFrame
+//			removeStackFrames(thread);
+//			
+//			// add stackFrame to suspended threads
+////			if (suspendedThreads.contains(thread)) {
+//			if (thread.isSuspended()) {
+//				// add all current stackFrames for this thread
+//				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
+//				stackFramesTreeItems.put(thread, map);// data
+//				StackFrame topFrame = null;
+//				try {
+//					topFrame = thread.frame(0);
+//					for (StackFrame sf : thread.frames()) {
+//						if(!thread.isSuspended()) {//maybe now it's resumed???
+//							removeStackFrames(thread);
+//							break;
+//						}
+//						String stackFrameName = generateStackFrameName(sf);
+//						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadsTreeItems.get(thread));// view
+//						map.put(stackFrameTreeItem, sf);// data
+//					}
+//				} catch (IncompatibleThreadStateException e) {
+//					e.printStackTrace();
+//				}
+//				// go to file for only eventThread
+//				if (eventThread.equals(thread)) {
+//					// top frame's *.java open in selectedTab?
+//					Location loc = topFrame.location();
+//					System.out.println("goto top frame's location, thread: " + thread.name());
+//					SuspensionLocation.gotoLocationFile(loc);
+//				}
+//			}
+//		}
+	}
 
-			// add stackFrame to suspended threads
-//			if (suspendedThreads.contains(thread)) {
-			if (thread.isSuspended()) {
-				// add all current stackFrames for this thread
-				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
-				stackFramesTreeItems.put(thread, map);// data
-				StackFrame topFrame = null;
-				try {
-					topFrame = thread.frame(0);
-					for (StackFrame sf : thread.frames()) {
-						String stackFrameName = generateStackFrameName(sf);
-						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadTreeItem);// view
-						map.put(stackFrameTreeItem, sf);// data
-					}
-				} catch (IncompatibleThreadStateException e) {
-					e.printStackTrace();
-				}
-				// go to file for only eventThread
-				if (eventThread.equals(thread)) {
-					// top frame's *.java open in selectedTab?
-					Location loc = topFrame.location();
-					System.out.println("goto top frame's location, thread: " + thread.name());
-					SuspensionLocation.gotoLocationFile(loc);
-				}
+	public void removeStackFrames(ThreadReference thread) {
+		// remove all old stackFrames for this thread
+		TreeItem<String> threadTreeItem = null;
+		try {
+			threadsTreeItemsLock.lock();// on Debugger thread now
+			while (!threadsTreeItems.containsKey(thread)) {
+				addedThread.await();
 			}
+			threadTreeItem = threadsTreeItems.get(thread);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			threadsTreeItemsLock.unlock();
 		}
+		System.out.println("contains thread " + thread.name() + ": " + threadsTreeItems.containsKey(thread));
+		threadTreeItem.getChildren().clear();// view
+		stackFramesTreeItems.remove(thread);// data
 	}
 
 //	private void toggleThread(MouseEvent e) {

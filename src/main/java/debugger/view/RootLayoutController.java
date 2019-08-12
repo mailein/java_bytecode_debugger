@@ -689,12 +689,16 @@ public class RootLayoutController {
 
 	@FXML
 	private void handleResume() {
+
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		ObservableList<ThreadReference> threads = currentDebugger.getThreads();
 		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		if (threadAreaController.isDebuggerselected()) {// all threads resume
 			threads.forEach(thread -> {
+				// removes stackframes from all threads
+				threadAreaController.removeStackFrames(thread);
+
 				if (thread.isSuspended()) {
 					currentDebugger.setSuspendCount(thread, 1);
 					threadAreaController.setThreadGraphic(thread, false);
@@ -702,6 +706,9 @@ public class RootLayoutController {
 			});
 			currentDebugger.getVm().resume();// barrier?
 		} else if (selectedThread != null) {// selected thread resume
+			// removes stackframes from selected thread
+			threadAreaController.removeStackFrames(selectedThread);
+			
 			if (selectedThread.isSuspended()) {
 				threadAreaController.setThreadGraphic(selectedThread, false);
 				currentDebugger.setSuspendCount(selectedThread, 0);
@@ -772,6 +779,10 @@ public class RootLayoutController {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		Debugger currentDebugger = threadAreaController.getRunningDebugger();
 		ThreadReference currentThread = threadAreaController.getSelectedThread();
+		
+		// removes stackframes from all threads
+		threadAreaController.removeStackFrames(currentThread);
+		
 		// NO TODO popFrames before step(Into/Over/Return), enabling stepping based on
 		// selectedFrame
 //		StackFrame prevSf = GUI.getThreadAreaController().getPrevStackFrame();

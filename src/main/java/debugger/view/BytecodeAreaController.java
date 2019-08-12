@@ -127,6 +127,9 @@ public class BytecodeAreaController {
 	// TODO when a thread is selected, line indicator in BytecodeArea should also
 	// change
 	public void refreshParagraphGraphicFactory(Method method, int lineNumber, long bci) {
+		if(currentBytecode == null) {
+			return;
+		}
 		List<MyMethod> mymethods = currentBytecode.getMethods();
 		// get line# -> BCI -> fileIndex
 		boolean findMethod = false;
