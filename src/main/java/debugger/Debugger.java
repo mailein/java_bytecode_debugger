@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
@@ -245,13 +247,17 @@ public class Debugger implements Runnable {
 				threadDeathRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
 				threadDeathRequest.enable();
 				// for threadArea view
-				Platform.runLater(() -> threads.add(thread));
+				Platform.runLater(() -> {
+					threads.add(thread);
+				});
 			}
 			eventSet.resume();
 		} else if (event instanceof ThreadDeathEvent) {
 			ThreadReference thread = ((ThreadDeathEvent) event).thread();
 			// for threadArea view
-			Platform.runLater(() -> threads.remove(thread));
+//			Platform.runLater(() -> {
+//				threads.remove(thread);
+//			});
 			eventSet.resume();
 		} else if (event instanceof ClassPrepareEvent) {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;

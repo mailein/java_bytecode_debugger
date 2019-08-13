@@ -1,5 +1,7 @@
 package debugger;
 
+import com.sun.jdi.InvocationException;
+
 import debugger.view.RootLayoutController;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
@@ -24,9 +26,6 @@ public class Main {
 			}
 		});
 		Application.launch(debugger.GUI.class);
-//		Thread t = new Thread(() -> Application.launch(debugger.GUI.class));
-//		t.start();
-//		Application.launch(JavaKeywordsDemo.class);
 	}
 
 	private static void newDebug() {

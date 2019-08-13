@@ -489,7 +489,7 @@ public class RootLayoutController {
 			bytecodeAreaController.getBytecodeMap().put(bytecodeName, null);
 
 			File bytecodeFile = new File(bytecodeName);
-			processBuilder.command("javap", "-c", "-l", classFilePath);
+			processBuilder.command("javap", "-c", "-l", "-p", classFilePath);
 			processBuilder.redirectErrorStream(true);
 			processBuilder.redirectOutput(Redirect.appendTo(bytecodeFile));
 			String tmp = startProcess(processBuilder);

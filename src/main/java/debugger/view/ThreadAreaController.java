@@ -161,8 +161,8 @@ public class ThreadAreaController {
 							TreeItem<String> threadTreeItem = addBranch(name, debuggerTreeItem);
 							threadTreeItem.setGraphic(getRunningIcon());
 							tree.getSelectionModel().select(threadTreeItem);
+							threadsTreeItemsLock.lock();// on GUI thread now
 							try {
-								threadsTreeItemsLock.lock();// on GUI thread now
 								threadsTreeItems.put(thread, threadTreeItem);
 								addedThread.signal();
 							} finally {
@@ -178,8 +178,8 @@ public class ThreadAreaController {
 						if (this.selectedThread.equals(thread)) {
 							tree.getSelectionModel().selectPrevious();
 						}
+						threadsTreeItemsLock.lock();// on GUI thread now
 						try {
-							threadsTreeItemsLock.lock();// on GUI thread now
 							threadsTreeItems.remove(thread);
 						} finally {
 							threadsTreeItemsLock.unlock();
@@ -207,49 +207,49 @@ public class ThreadAreaController {
 
 	// update all suspended threads, running thread has no StackFrame
 	public void updateStackFrameBranches(ThreadReference eventThread) {
-//		ObservableList<ThreadReference> threads = debugger.getThreads();
-////		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
-//		for (ThreadReference thread : threads) {
-//			// remove stackFrame
-//			removeStackFrames(thread);
-//			
-//			// add stackFrame to suspended threads
-////			if (suspendedThreads.contains(thread)) {
-//			if (thread.isSuspended()) {
-//				// add all current stackFrames for this thread
-//				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
-//				stackFramesTreeItems.put(thread, map);// data
-//				StackFrame topFrame = null;
-//				try {
-//					topFrame = thread.frame(0);
-//					for (StackFrame sf : thread.frames()) {
-//						if(!thread.isSuspended()) {//maybe now it's resumed???
-//							removeStackFrames(thread);
-//							break;
-//						}
-//						String stackFrameName = generateStackFrameName(sf);
-//						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadsTreeItems.get(thread));// view
-//						map.put(stackFrameTreeItem, sf);// data
-//					}
-//				} catch (IncompatibleThreadStateException e) {
-//					e.printStackTrace();
-//				}
-//				// go to file for only eventThread
-//				if (eventThread.equals(thread)) {
-//					// top frame's *.java open in selectedTab?
-//					Location loc = topFrame.location();
-//					System.out.println("goto top frame's location, thread: " + thread.name());
-//					SuspensionLocation.gotoLocationFile(loc);
-//				}
-//			}
-//		}
+		ObservableList<ThreadReference> threads = debugger.getThreads();
+//		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
+		for (ThreadReference thread : threads) {
+			// remove stackFrame
+			removeStackFrames(thread);
+			
+			// add stackFrame to suspended threads
+//			if (suspendedThreads.contains(thread)) {
+			if (thread.isSuspended()) {
+				// add all current stackFrames for this thread
+				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
+				stackFramesTreeItems.put(thread, map);// data
+				StackFrame topFrame = null;
+				try {
+					topFrame = thread.frame(0);
+					for (StackFrame sf : thread.frames()) {
+						if(!thread.isSuspended()) {//maybe now it's resumed???
+							removeStackFrames(thread);
+							break;
+						}
+						String stackFrameName = generateStackFrameName(sf);
+						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadsTreeItems.get(thread));// view
+						map.put(stackFrameTreeItem, sf);// data
+					}
+				} catch (IncompatibleThreadStateException e) {
+					e.printStackTrace();
+				}
+				// go to file for only eventThread
+				if (eventThread.equals(thread)) {
+					// top frame's *.java open in selectedTab?
+					Location loc = topFrame.location();
+					System.out.println("goto top frame's location, thread: " + thread.name());
+					SuspensionLocation.gotoLocationFile(loc);
+				}
+			}
+		}
 	}
 
 	public void removeStackFrames(ThreadReference thread) {
 		// remove all old stackFrames for this thread
 		TreeItem<String> threadTreeItem = null;
+		threadsTreeItemsLock.lock();// on Debugger thread now
 		try {
-			threadsTreeItemsLock.lock();// on Debugger thread now
 			while (!threadsTreeItems.containsKey(thread)) {
 				addedThread.await();
 			}
