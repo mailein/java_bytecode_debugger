@@ -244,7 +244,7 @@ public class Debugger implements Runnable {
 //				eventHandlerThreads.put(thread, new ReentrantLock());
 				// thread death
 				ThreadDeathRequest threadDeathRequest = eventRequestManager.createThreadDeathRequest();
-				threadDeathRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+				threadDeathRequest.setSuspendPolicy(EventRequest.SUSPEND_NONE);
 				threadDeathRequest.enable();
 				// for threadArea view
 				Platform.runLater(() -> {
@@ -258,7 +258,6 @@ public class Debugger implements Runnable {
 			Platform.runLater(() -> {
 				threads.remove(thread);
 			});
-			eventSet.resume();
 		} else if (event instanceof ClassPrepareEvent) {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
 			ReferenceType classRefType = classPrepareEvent.referenceType();
