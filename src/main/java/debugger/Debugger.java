@@ -42,6 +42,7 @@ import com.sun.jdi.event.EventQueue;
 import com.sun.jdi.event.EventSet;
 import com.sun.jdi.event.ModificationWatchpointEvent;
 import com.sun.jdi.event.StepEvent;
+import com.sun.jdi.event.ThreadDeathEvent;
 import com.sun.jdi.event.ThreadStartEvent;
 import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
@@ -52,6 +53,7 @@ import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.ModificationWatchpointRequest;
+import com.sun.jdi.request.ThreadDeathRequest;
 import com.sun.jdi.request.ThreadStartRequest;
 
 import debugger.dataType.HistoryRecord;
@@ -246,8 +248,18 @@ public class Debugger implements Runnable {
 			if (mainThread.threadGroup().equals(thread.threadGroup())) {
 				eventHandlerThreads.put(thread, new ReentrantLock());
 				Platform.runLater(() -> threads.add(thread));
+				// thread death
+				ThreadDeathRequest threadDeathRequest = eventRequestManager.createThreadDeathRequest();
+				threadDeathRequest.setSuspendPolicy(EventRequest.SUSPEND_NONE);
+				threadDeathRequest.enable();
 			}
 			eventSet.resume();
+		} else if (event instanceof ThreadDeathEvent) {
+			ThreadReference thread = ((ThreadDeathEvent) event).thread();
+			// for threadArea view
+			Platform.runLater(() -> {
+				threads.remove(thread);
+			});
 		} else if (event instanceof ClassPrepareEvent) {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
 			ReferenceType classRefType = classPrepareEvent.referenceType();
@@ -618,15 +630,15 @@ public class Debugger implements Runnable {
 		int count = thread.suspendCount();
 		if (count == idealSuspendCount)
 			return;
-		if(count < idealSuspendCount) {
-			for(int i = count; i < idealSuspendCount; i++) {
+		if (count < idealSuspendCount) {
+			for (int i = count; i < idealSuspendCount; i++) {
 				thread.suspend();
 			}
 		}
 		// can't use suspendCount in loop condition, after execute loop body, the
 		// resumed thread will run to a breakpoint and suspendCount will +1 again
-		if(count > idealSuspendCount) {
-			for(int i = count; i > idealSuspendCount; i--) {
+		if (count > idealSuspendCount) {
+			for (int i = count; i > idealSuspendCount; i--) {
 				thread.resume();
 			}
 		}
