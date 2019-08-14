@@ -1,5 +1,7 @@
 package debugger.dataType;
 
+import java.util.concurrent.locks.Lock;
+
 import com.sun.jdi.Field;
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
@@ -94,44 +96,51 @@ public class Watchpoint {// doesn't include local var
 	// originate from this refType.
 	// eg. public static int a; //a line in class A
 	// A.a is visible in class B
-	public void eval() {//TODO see below
+	public void eval() {// TODO see below
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		if (threadAreaController != null) {
 			Debugger debugger = threadAreaController.getRunningDebugger();
 			ThreadReference thread = threadAreaController.getSelectedThread();
-			if (debugger != null && thread.isSuspended()) {
-				Event currentEvent = debugger.getCurrentEvent().get(thread);
-				if (currentEvent != null) {
-					Location loc = null;
-					if (currentEvent instanceof BreakpointEvent) {
-						BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
-						loc = bpEvent.location();
-					}
-					if (currentEvent instanceof StepEvent) {
-						StepEvent stepEvent = (StepEvent) currentEvent;
-						loc = stepEvent.location();
-					}
-					if (loc != null) {
-						ReferenceType refType = loc.declaringType();
-						String withoutFieldName = stripOffFieldName();
-						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))) {
+			Lock lock = debugger.getLock(thread);
+			lock.lock();
+			try {
+				if (debugger != null && thread.isSuspended()) {
+					Event currentEvent = debugger.getCurrentEvent().get(thread);
+					if (currentEvent != null) {
+						Location loc = null;
+						if (currentEvent instanceof BreakpointEvent) {
+							BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
+							loc = bpEvent.location();
+						}
+						if (currentEvent instanceof StepEvent) {
+							StepEvent stepEvent = (StepEvent) currentEvent;
+							loc = stepEvent.location();
+						}
+						if (loc != null) {
+							ReferenceType refType = loc.declaringType();
+							String withoutFieldName = stripOffFieldName();
+							if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))) {
 //							Field field = refType.fieldByName(getName());//field doesn't need to originate from this class
 //							if (visible) {// TODO should base on field visibility, 
 //								setValue(refType.getValue(field).toString());
 //							} else {
 //								setValue("<Error>");
 //							}
-						}
-						if(withoutFieldName.equals("")) {//same name under different classes
-							Field field = refType.fieldByName(getName());//field doesn't need to originate from this class
-							if (field != null) {// TODO should base on field visibility, 
-								setValue(refType.getValue(field).toString());
-							} else {
-								setValue("<Error>");
+							}
+							if (withoutFieldName.equals("")) {// same name under different classes
+								Field field = refType.fieldByName(getName());// field doesn't need to originate from
+																				// this class
+								if (field != null) {// TODO should base on field visibility,
+									setValue(refType.getValue(field).toString());
+								} else {
+									setValue("<Error>");
+								}
 							}
 						}
 					}
 				}
+			} finally {
+				lock.unlock();
 			}
 		}
 	}

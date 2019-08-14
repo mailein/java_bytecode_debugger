@@ -1,6 +1,7 @@
 package debugger.view;
 
 import java.util.List;
+import java.util.concurrent.locks.Lock;
 
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.IncompatibleThreadStateException;
@@ -50,29 +51,35 @@ public class LocalVarAreaController {
 	public void refresh() {
 		localVars.clear();
 		ThreadReference thread = GUI.getThreadAreaController().getSelectedThread();
-		if (thread.isSuspended()) {
-			try {
-				StackFrame currFrame = thread.frame(0);
-				Location currFrameLocation = currFrame.location();
-				boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
-				if (suspendAtSelectedTab) {
-					List<LocalVariable> locals = null;
-					try {
-						locals = currFrame.visibleVariables();
-						locals.forEach(local -> {
-							Value value = currFrame.getValue(local);
-							localVars.add(new LocalVar(local.name(), value.toString()));
-						});
-					} catch (AbsentInformationException e) {
-						System.out.println("It's alright, there is no local variable information for this method.");
+		Lock lock = GUI.getThreadAreaController().getRunningDebugger().getLock(thread);
+		lock.lock();
+		try {
+			if (thread.isSuspended()) {
+				try {
+					StackFrame currFrame = thread.frame(0);
+					Location currFrameLocation = currFrame.location();
+					boolean suspendAtSelectedTab = SuspensionLocation.atSelectedTab(currFrameLocation);
+					if (suspendAtSelectedTab) {
+						List<LocalVariable> locals = null;
+						try {
+							locals = currFrame.visibleVariables();
+							locals.forEach(local -> {
+								Value value = currFrame.getValue(local);
+								localVars.add(new LocalVar(local.name(), value.toString()));
+							});
+						} catch (AbsentInformationException e) {
+							System.out.println("It's alright, there is no local variable information for this method.");
 //					e.printStackTrace();
+						}
 					}
+				} catch (IncompatibleThreadStateException e) {
+					e.printStackTrace();
+				} catch (IndexOutOfBoundsException e) {
+					// frame index
 				}
-			} catch (IncompatibleThreadStateException e) {
-				e.printStackTrace();
-			} catch (IndexOutOfBoundsException e) {
-				// frame index
 			}
+		} finally {
+			lock.unlock();
 		}
 	}
 

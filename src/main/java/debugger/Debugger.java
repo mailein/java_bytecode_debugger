@@ -77,7 +77,7 @@ public class Debugger implements Runnable {
 	private boolean vmExit = false;
 
 	private ThreadReference mainThread = null;
-	private ObservableList<ThreadReference> threads = FXCollections.observableArrayList();
+	private ObservableMap<ThreadReference, Lock> threads = FXCollections.observableHashMap();
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
@@ -248,16 +248,16 @@ public class Debugger implements Runnable {
 				threadDeathRequest.enable();
 				// for threadArea view
 				Platform.runLater(() -> {
-					threads.add(thread);
+					threads.put(thread, new ReentrantLock());
 				});
 			}
 			eventSet.resume();
 		} else if (event instanceof ThreadDeathEvent) {
 			ThreadReference thread = ((ThreadDeathEvent) event).thread();
 			// for threadArea view
-//			Platform.runLater(() -> {
-//				threads.remove(thread);
-//			});
+			Platform.runLater(() -> {
+				threads.remove(thread);
+			});
 			eventSet.resume();
 		} else if (event instanceof ClassPrepareEvent) {
 			ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
@@ -592,9 +592,13 @@ public class Debugger implements Runnable {
 	}
 
 	public ObservableList<ThreadReference> getThreads() {
-		return threads;
+		return FXCollections.observableArrayList(threads.keySet());
 	}
 
+	public Lock getLock(ThreadReference thread) {
+		return threads.get(thread);
+	}
+	
 	public ObservableMap<String, ReferenceType> getClasses() {
 		return classes;
 	}
@@ -629,20 +633,26 @@ public class Debugger implements Runnable {
 	}
 
 	public void setSuspendCount(ThreadReference thread, int idealSuspendCount) {
-		int count = thread.suspendCount();
-		if (count == idealSuspendCount)
-			return;
-		if (count < idealSuspendCount) {
-			for (int i = count; i < idealSuspendCount; i++) {
-				thread.suspend();
+		Lock lock = threads.get(thread);
+		lock.lock();
+		try {
+			int count = thread.suspendCount();
+			if (count == idealSuspendCount)
+				return;
+			if (count < idealSuspendCount) {
+				for (int i = count; i < idealSuspendCount; i++) {
+					thread.suspend();
+				}
 			}
-		}
-		// can't use suspendCount in loop condition, after execute loop body, the
-		// resumed thread will run to a breakpoint and suspendCount will +1 again
-		if (count > idealSuspendCount) {
-			for (int i = count; i > idealSuspendCount; i--) {
-				thread.resume();
+			// can't use suspendCount in loop condition, after execute loop body, the
+			// resumed thread will run to a breakpoint and suspendCount will +1 again
+			if (count > idealSuspendCount) {
+				for (int i = count; i > idealSuspendCount; i--) {
+					thread.resume();
+				}
 			}
+		} finally {
+			lock.unlock();
 		}
 	}
 

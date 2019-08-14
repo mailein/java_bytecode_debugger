@@ -77,12 +77,17 @@ public class ThreadAreaController {
 				if (nv.getValue().contains(threadNameMarker)) {
 					this.isDebuggerselected = false;
 					this.selectedThread = String2Thread(nv.getValue());
-					if (this.selectedThread.isSuspended()) {
-						GUI.getWatchpointAreaController().evalAll();// TODO field visibility, see Watchpoint.eval()
-						GUI.getLocalVarAreaController().refresh();// TODO suspended when the loop is entered, running
-																	// when refresh()
-					} else {
-						GUI.getLocalVarAreaController().clear();
+					Lock lock = debugger.getLock(selectedThread);
+					lock.lock();
+					try {
+						if (this.selectedThread.isSuspended()) {
+							GUI.getWatchpointAreaController().evalAll();// TODO field visibility, see Watchpoint.eval()
+							GUI.getLocalVarAreaController().refresh();
+						} else {
+							GUI.getLocalVarAreaController().clear();
+						}
+					} finally {
+						lock.unlock();
 					}
 //					this.prevStackFrame = null;//current frame is top frame
 				}
@@ -103,18 +108,25 @@ public class ThreadAreaController {
 //					}
 				}
 				// update line indicator
-				if (selectedThread.isSuspended()) {
-					try {
-						StackFrame stackFrame = selectedThread.frame(0);
-						Location loc = stackFrame.location();
-						int lineNumber = loc.lineNumber();
-						GUI.getCodeAreaController().setCurrLine(lineNumber);// CodeArea
-						Method method = loc.method();
-						long bci = loc.codeIndex();
-						GUI.getBytecodeAreaController().refreshParagraphGraphicFactory(method, lineNumber, bci);// BytecodeArea
-					} catch (IncompatibleThreadStateException e) {
-						e.printStackTrace();
+				Lock lock = debugger.getLock(selectedThread);
+				lock.lock();
+				try {
+					if (selectedThread.isSuspended()) {
+						try {
+							StackFrame stackFrame = selectedThread.frame(0);
+							Location loc = stackFrame.location();
+							int lineNumber = loc.lineNumber();
+							GUI.getCodeAreaController().setCurrLine(lineNumber);// CodeArea
+							Method method = loc.method();
+							long bci = loc.codeIndex();
+							GUI.getBytecodeAreaController().refreshParagraphGraphicFactory(method, lineNumber, bci);// BytecodeArea
+						} catch (IncompatibleThreadStateException e) {
+							System.out.println("selected thread is not suspended ---- updating line indicator.");
+							e.printStackTrace();
+						}
 					}
+				} finally {
+					lock.unlock();
 				}
 			}
 		});
@@ -208,39 +220,44 @@ public class ThreadAreaController {
 	// update all suspended threads, running thread has no StackFrame
 	public void updateStackFrameBranches(ThreadReference eventThread) {
 		ObservableList<ThreadReference> threads = debugger.getThreads();
-//		List<ThreadReference> suspendedThreads = debugger.getSuspendedThreads();
 		for (ThreadReference thread : threads) {
 			// remove stackFrame
 			removeStackFrames(thread);
-			
-			// add stackFrame to suspended threads
-//			if (suspendedThreads.contains(thread)) {
-			if (thread.isSuspended()) {
-				// add all current stackFrames for this thread
-				Map<TreeItem<String>, StackFrame> map = new HashMap<>();
-				stackFramesTreeItems.put(thread, map);// data
-				StackFrame topFrame = null;
-				try {
-					topFrame = thread.frame(0);
-					for (StackFrame sf : thread.frames()) {
-						if(!thread.isSuspended()) {//maybe now it's resumed???
-							removeStackFrames(thread);
-							break;
+			Lock lock = debugger.getLock(thread);
+			lock.lock();
+			try {
+				// add stackFrame to suspended threads
+				if (thread.isSuspended()) {
+					// add all current stackFrames for this thread
+					Map<TreeItem<String>, StackFrame> map = new HashMap<>();
+					stackFramesTreeItems.put(thread, map);// data
+					StackFrame topFrame = null;
+					try {
+						topFrame = thread.frame(0);
+						for (StackFrame sf : thread.frames()) {
+//						if(!thread.isSuspended()) {//maybe now it's resumed???
+//							removeStackFrames(thread);
+//							break;
+//						}
+							String stackFrameName = generateStackFrameName(sf);
+							TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName,
+									threadsTreeItems.get(thread));// view
+							map.put(stackFrameTreeItem, sf);// data
 						}
-						String stackFrameName = generateStackFrameName(sf);
-						TreeItem<String> stackFrameTreeItem = addBranch(stackFrameName, threadsTreeItems.get(thread));// view
-						map.put(stackFrameTreeItem, sf);// data
+					} catch (IncompatibleThreadStateException e) {
+						System.out.println(thread.name() + " resumed in updateStackFrameBranches.");
+						e.printStackTrace();
 					}
-				} catch (IncompatibleThreadStateException e) {
-					e.printStackTrace();
+					// go to file for only eventThread
+					if (eventThread.equals(thread)) {
+						// top frame's *.java open in selectedTab?
+						Location loc = topFrame.location();
+						System.out.println("goto top frame's location, thread: " + thread.name());
+						SuspensionLocation.gotoLocationFile(loc);
+					}
 				}
-				// go to file for only eventThread
-				if (eventThread.equals(thread)) {
-					// top frame's *.java open in selectedTab?
-					Location loc = topFrame.location();
-					System.out.println("goto top frame's location, thread: " + thread.name());
-					SuspensionLocation.gotoLocationFile(loc);
-				}
+			} finally {
+				lock.unlock();
 			}
 		}
 	}
@@ -345,7 +362,15 @@ public class ThreadAreaController {
 
 	public void updateThreadsGraphic() {
 		ObservableList<ThreadReference> threads = debugger.getThreads();
-		threads.forEach(thread -> setThreadGraphic(thread, thread.isSuspended()));
+		threads.forEach(thread -> {
+			Lock lock = debugger.getLock(thread);
+			lock.lock();
+			try {
+				setThreadGraphic(thread, thread.isSuspended());
+			}finally {
+				lock.unlock();
+			}
+		});
 	}
 
 	// ----------getters------------//
