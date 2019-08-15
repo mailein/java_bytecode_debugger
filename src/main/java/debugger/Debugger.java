@@ -83,7 +83,6 @@ public class Debugger implements Runnable {
 	private ObservableMap<String, ReferenceType> classes = FXCollections.observableHashMap(); // <complete className,
 																								// refType>
 //	private Map<String, List<HistoryRecord>> VarTable = new HashMap<>();// <fieldName, {thread, read/write, value}>
-	private List<ThreadReference> suspendedThreads = new ArrayList<>();
 	private Map<ThreadReference, Event> currentEvent = new HashMap<>();// thread: actually no need, because global
 																		// variables
 																		// doesn't keep old value for different events
@@ -200,7 +199,6 @@ public class Debugger implements Runnable {
 					vmExit = true;
 				} else if (event instanceof BreakpointEvent) {
 					ThreadReference thread = ((BreakpointEvent) event).thread();
-					addToSuspended(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
@@ -216,7 +214,6 @@ public class Debugger implements Runnable {
 					}).start();
 				} else if (event instanceof StepEvent) {
 					ThreadReference thread = ((StepEvent) event).thread();
-					addToSuspended(thread);
 					new Thread(() -> {
 						Lock lock = eventHandlerThreads.get(thread);
 						try {
@@ -658,25 +655,6 @@ public class Debugger implements Runnable {
 	public void terminate() {
 		vmExit = true;
 		vm.resume();
-	}
-
-	// return true for newly added, false for already in suspended list
-	private boolean addToSuspended(ThreadReference thread) {
-		if (!suspendedThreads.contains(thread)) {
-			suspendedThreads.add(thread);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	// return true for newly removed, false for already not/never in suspended list
-	public boolean removeFromSuspended(ThreadReference thread) {
-		return suspendedThreads.remove(thread);
-	}
-
-	public List<ThreadReference> getSuspendedThreads() {
-		return suspendedThreads;
 	}
 
 	@Override
