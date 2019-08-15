@@ -2,7 +2,6 @@ package debugger.view;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -593,23 +592,26 @@ public class RootLayoutController {
 	private void handleResume() {
 		Debugger currentDebugger = GUI.getThreadAreaController().getRunningDebugger();
 		ThreadReference selectedThread = GUI.getThreadAreaController().getSelectedThread();
-		if (selectedThread == null) {
-			if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
-				ObservableList<ThreadReference> threads = currentDebugger.getThreads();
-				threads.forEach(thread -> {
-					if(thread.isSuspended()) {
-						currentDebugger.setSuspendCount(thread, 1);
-					}
-				});
-				currentDebugger.getVm().resume();
-			} else {// wrong
-
-			}
-		} else {// selected thread resume
+		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
+		if (GUI.getThreadAreaController().isDebuggerselected()) {// all threads resume
+			ObservableList<ThreadReference> threads = currentDebugger.getThreads();
+			threads.forEach(thread -> {
+				// removes stackframes from all threads
+				threadAreaController.removeStackFrames(thread);
+				if (thread.isSuspended()) {
+					currentDebugger.setSuspendCount(thread, 1);
+					threadAreaController.setThreadGraphic(thread, false);
+				}
+			});
+			currentDebugger.getVm().resume();
+		} else if (selectedThread != null) {
+			// removes stackframes from selected thread
+			threadAreaController.removeStackFrames(selectedThread);
 			if (selectedThread.isSuspended()) {
 				currentDebugger.setSuspendCount(selectedThread, 0);
+				threadAreaController.setThreadGraphic(selectedThread, false);
 			} else {// do nothing
-					// TODO deactivate resume button ==> activate for other situations
+				// TODO deactivate resume button ==> activate for other situations
 			}
 		}
 	}
@@ -685,9 +687,12 @@ public class RootLayoutController {
 //				e.printStackTrace();
 //			}
 //		}
-		if(currentThread.isSuspended()) {
+		// removes stackframes from all threads
+		threadAreaController.removeStackFrames(currentThread);
+		if (currentThread.isSuspended()) {
 			StepCommand stepi = new StepCommand(currentDebugger, currentThread, size, depth);
 			stepi.execute();
+			threadAreaController.setThreadGraphic(currentThread, false);
 			currentDebugger.setSuspendCount(currentThread, 0);
 		}
 	}
