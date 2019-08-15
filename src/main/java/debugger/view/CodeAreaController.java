@@ -85,14 +85,14 @@ public class CodeAreaController {
 			Circle circle = new Circle(5.0, Color.BLUE);
 			circle.setVisible(false);
 			Label label = new Label();
-			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));//see no words when scroll right
+			label.setBorder(new Border(new BorderStroke(Color.WHITE, null, null, null)));// see no words when scroll
+																							// right
 			label.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
 			label.setGraphic(circle);
 			label.setCursor(Cursor.HAND);
 			label.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
-					toggleLineBreakpoint(lineNumber, circle);
+				toggleLineBreakpoint(click, lineNumber, circle);
 			});
 			return label;
 		}
@@ -122,20 +122,34 @@ public class CodeAreaController {
 		}
 	}
 
-	private void toggleLineBreakpoint(int lineNumber, Circle circle) {
-		boolean visible = circle.isVisible();
-		circle.setVisible(!visible);
-		String fileSourcepath = "";
-		try {
-			fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (visible) {// remove breakpoint, eg. line 0 here is line 1 in debugger
-			GUI.getBreakpointAreaController().getBreakpoints()
-					.remove(new LineBreakpoint(fileSourcepath, lineNumber + 1));
-		} else {// add breakpoint
-			GUI.getBreakpointAreaController().getBreakpoints().add(new LineBreakpoint(fileSourcepath, lineNumber + 1));
+	private void toggleLineBreakpoint(MouseEvent click, int lineNumber, Circle circle) {
+		if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY) {
+			// get fileSourcepath
+			String fileSourcepath = "";
+			try {
+				fileSourcepath = tabsWithFile.get(selectedTab).getCanonicalPath();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			// add / remove breakpoint based on if there's already a bp on !!newLineNumber!!
+			// NOT based on current lineNumber!!
+			int newLineNumber = GUI.getBytecodeAreaController().nextExecutableLine(fileSourcepath, lineNumber + 1);
+			boolean bpInNewLine = GUI.getBreakpointAreaController().lineBreakpointInLine(fileSourcepath, newLineNumber);
+			if (bpInNewLine) {// remove breakpoint, eg. line 0 here is line 1 in debugger
+				GUI.getBreakpointAreaController().getBreakpoints()
+						.remove(new LineBreakpoint(fileSourcepath, newLineNumber));
+			} else {// add breakpoint
+				GUI.getBreakpointAreaController().getBreakpoints()
+						.add(new LineBreakpoint(fileSourcepath, newLineNumber));
+			}
+
+			// circle visible / not visible for newLineNumber
+			if (newLineNumber != lineNumber + 1) {// visible(next executable line) = existBp(next executable line)
+				refreshParagraphGraphicFactory(-1, getCurrLine());
+			} else { // visible(current lineNumber)
+				circle.setVisible(!bpInNewLine);
+			}
 		}
 	}
 
@@ -168,7 +182,7 @@ public class CodeAreaController {
 	public void refreshParagraphGraphicFactory(int currLineOv, int currLineNv) {
 		List<IntFunction<? extends Node>> graphicFactory = new ArrayList<>();
 		graphicFactory.add(selectedCodeArea.getParagraphGraphicFactory());
-		if(graphicFactory.get(0) == null)
+		if (graphicFactory.get(0) == null)
 			return;
 		graphicFactory.add(line -> {
 			HBox hbox = (HBox) graphicFactory.get(0).apply(line);
@@ -193,10 +207,11 @@ public class CodeAreaController {
 
 			// indicator for ov, nv
 			Polygon triangle = (Polygon) hbox.getChildren().get(2);
-			if (line + 1 == currLineOv)
-				triangle.setVisible(false);
-			if (line + 1 == currLineNv)
+			if (line + 1 == currLineNv) {
 				triangle.setVisible(true);
+			} else {
+				triangle.setVisible(false);
+			}
 			selectedCodeArea.showParagraphInViewport(currLineNv - 1);
 			return hbox;
 		});
@@ -205,9 +220,9 @@ public class CodeAreaController {
 
 	// handle MenuItems: New and Open
 	public void newTab(File file) {
-		//if file opened, select the tab of that file
+		// if file opened, select the tab of that file
 		boolean ret = avoidOpeningSameFile(file);
-		if(ret)
+		if (ret)
 			return;
 		// get name and content
 		String tempName = file.getName();
@@ -240,8 +255,7 @@ public class CodeAreaController {
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-				if (click.getClickCount() == 2 && click.getButton() == MouseButton.PRIMARY)
-					toggleLineBreakpoint(line, (Circle) ((Label) bp).getGraphic());
+					toggleLineBreakpoint(click, line, (Circle) ((Label) bp).getGraphic());
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);
@@ -361,20 +375,21 @@ public class CodeAreaController {
 	public void gotoTabOfFile(File file) {// TODO lineIndicator
 		boolean[] isOpened = { false };
 		tabsWithFile.forEach((t, f) -> {
-			if (f.equals(file)) {
+			if (f.equals(file)) {// already opened in another tab
 				tabPane.getSelectionModel().select(t);
-				if(f.equals(file))
-					isOpened[0] = true;
+				isOpened[0] = true;
 			}
 		});
-		if (!isOpened[0]) {
+		if (!isOpened[0]) {// not opened
 			newTab(file);
 		}
+		// refresh breakpoints, line indicator
+		refreshParagraphGraphicFactory(-1, getCurrLine());
 	}
 
 	public void gotoTabOfError(File file) {
 		boolean ret = avoidOpeningSameFile(file);
-		if(ret)
+		if (ret)
 			return;
 		String name = file.getName();
 		String content = "can't open this file";
@@ -389,24 +404,24 @@ public class CodeAreaController {
 	}
 
 	private boolean avoidOpeningSameFile(File fileToBeOpened) {
-		boolean[] ret = {false};
+		boolean[] ret = { false };
 		tabsWithFile.forEach((t, f) -> {
-			if(f.getName().equals(fileToBeOpened.getName())) {
+			if (f.getName().equals(fileToBeOpened.getName())) {
 				tabPane.getSelectionModel().select(t);
 				ret[0] = true;
 			}
 		});
 		return ret[0];
 	}
-	
+
 	public void setCurrLine(int line) {
 		this.currLine.set(line);
 	}
-	
+
 	public int getCurrLine() {
 		return this.currLine.get();
 	}
-	
+
 	public DoubleProperty getAnchorPanePrefWidthProperty() {
 		return this.anchorPane.prefWidthProperty();
 	}
