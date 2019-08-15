@@ -223,12 +223,15 @@ public class Debugger implements Runnable {
 
 	private void execute(Event event, boolean debugMode) {
 		if (event instanceof VMStartEvent) {
-			mainThread = ((VMStartEvent) event).thread(); // get mainThread of targetVM
+//			mainThread = ((VMStartEvent) event).thread(); // get mainThread of targetVM
 			System.out.println("--------\nVMStartEvent");
 			eventSet.resume();
 		} else if (event instanceof ThreadStartEvent) {
 			ThreadReference thread = ((ThreadStartEvent) event).thread();
-			if (mainThread.threadGroup().equals(thread.threadGroup())) {
+			if (mainThread == null && thread.name().equals("main")) {
+				mainThread = thread;
+			}
+			if (mainThread != null && mainThread.threadGroup().equals(thread.threadGroup())) {
 				eventHandlerThreads.put(thread, new ReentrantLock());
 				Platform.runLater(() -> threads.add(thread));
 				// thread death
