@@ -24,16 +24,14 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
@@ -75,25 +73,6 @@ public class GUI extends Application {
 			initRootLayout();// layout of menubar
 			primaryStage.setOnCloseRequest(e -> codeAreaController.closeCodeview());
 		}
-	}
-
-	/**
-	 * @param path: either "sourcepath" or "classpath"
-	 */
-	private GridPane pathRow(GridPane gridpane, int rowIndex, String path) {
-		Label pathLabel = new Label(path + ": ");
-		TextField pathTextField = new TextField();
-		pathTextField.setPrefWidth(300.0);
-//		pathTextField.prefColumnCountProperty().bind(pathTextField.textProperty().length());
-		pathTextField.textProperty().addListener((obs, ov, nv) -> {
-			if (path.equalsIgnoreCase("sourcepath")) {
-				setSourcepath(nv);
-//			}
-//			if (path.equalsIgnoreCase("classpath")) {
-				setClasspath(nv);//compile integrated, no need for classpath input
-			}
-		});
-		return gridpane;
 	}
 
 	private void setDefaultPath(boolean[] canStart) {

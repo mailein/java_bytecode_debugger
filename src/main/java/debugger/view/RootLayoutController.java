@@ -115,6 +115,9 @@ public class RootLayoutController {
 		this.newButton.setTooltip(new Tooltip("Ctrl+N"));
 		this.openButton.setTooltip(new Tooltip("Ctrl+O"));
 		this.saveButton.setTooltip(new Tooltip("Ctrl+S"));
+		this.compileButton.setTooltip(new Tooltip("F10"));
+		this.runButton.setTooltip(new Tooltip("Ctrl+F11"));
+		this.debugButton.setTooltip(new Tooltip("F11"));
 		this.resumeButton.setTooltip(new Tooltip("F8"));
 //		this.suspendButton.setTooltip(new Tooltip("F9"));
 		this.terminateButton.setTooltip(new Tooltip("Ctrl+F2"));
@@ -126,6 +129,13 @@ public class RootLayoutController {
 		enableOrDisableButtons(true);
 
 		Platform.runLater(() -> {
+			this.compileButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F10),
+					() -> this.compileButton.fire());
+			this.runButton.getScene().getAccelerators().put(
+					new KeyCodeCombination(KeyCode.F11, KeyCombination.CONTROL_DOWN),
+					() -> this.runButton.fire());
+			this.debugButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F11),
+					() -> this.debugButton.fire());
 			this.resumeButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F8),
 					() -> this.resumeButton.fire());
 //			this.suspendButton.getScene().getAccelerators().put(new KeyCodeCombination(KeyCode.F9),

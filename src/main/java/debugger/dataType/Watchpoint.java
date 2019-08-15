@@ -1,9 +1,5 @@
 package debugger.dataType;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Field;
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
@@ -27,6 +23,8 @@ public class Watchpoint {// doesn't include local var
 	private SimpleStringProperty name;// global variable, if local get it from localVarAreaController
 	private SimpleStringProperty value;
 	private boolean requested = false;
+
+	private Field field = null;
 	
 	private ObservableList<HistoryRecord> history = FXCollections.observableArrayList();
 
@@ -85,6 +83,19 @@ public class Watchpoint {// doesn't include local var
 		return className;
 	}
 
+	public Field getField() {
+		return this.field;
+	}
+
+	public void setField(Field f) {
+		this.field = f;
+	}
+
+	// to see if the field is visible in this refType, but the field doesn't have to
+	// originate from this refType.
+	// eg. public static int a; //a line in class A
+	// A.a is visible in class B
+
 	public void eval() {
 		ThreadAreaController threadAreaController = GUI.getThreadAreaController();
 		if (threadAreaController != null) {
@@ -92,33 +103,47 @@ public class Watchpoint {// doesn't include local var
 			ThreadReference thread = threadAreaController.getSelectedThread();
 			if (debugger != null) {
 				Event currentEvent = debugger.getCurrentEvent().get(thread);
-				Location loc = null;
-				if (currentEvent instanceof BreakpointEvent) {
-					BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
-					loc = bpEvent.location();
-				}
-				if (currentEvent instanceof StepEvent) {
-					StepEvent stepEvent = (StepEvent) currentEvent;
-					loc = stepEvent.location();
-				}
-				if (loc != null) {
-					ReferenceType refType = loc.declaringType();
-					String withoutFieldName = stripOffFieldName();
-					if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
-							|| withoutFieldName.equals("")) {
-						Field field = refType.fieldByName(getName());
-						if (field != null)
-							setValue(refType.getValue(field).toString());
+				if (currentEvent != null) {
+					Location loc = null;
+					if (currentEvent instanceof BreakpointEvent) {
+						BreakpointEvent bpEvent = (BreakpointEvent) currentEvent;
+						loc = bpEvent.location();
+					}
+					if (currentEvent instanceof StepEvent) {
+						StepEvent stepEvent = (StepEvent) currentEvent;
+						loc = stepEvent.location();
+					}
+					if (loc != null) {
+						ReferenceType refType = loc.declaringType();
+						String withoutFieldName = stripOffFieldName();
+						if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))) {
+							// Field field = refType.fieldByName(getName());//field doesn't need to
+							// originate from this class
+							// if (visible) {// TODO should base on field visibility,
+							// setValue(refType.getValue(field).toString());
+							// } else {
+							// setValue("<Error>");
+							// }
+						}
+						if (withoutFieldName.equals("")) {// same name under different classes
+							Field field = refType.fieldByName(getName());// field doesn't need to originate from this
+																			// class
+							if (field != null) {// TODO should base on field visibility,
+								setValue(refType.getValue(field).toString());
+							} else {
+								setValue("<Error>");
+							}
+						}
 					}
 				}
 			}
 		}
 	}
-	
+
 	public boolean getRequested() {
 		return this.requested;
 	}
-	
+
 	public void setRequested(boolean b) {
 		this.requested = b;
 	}

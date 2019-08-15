@@ -61,7 +61,7 @@ public class WatchpointAreaController {
 		valueCol.setCellValueFactory(new PropertyValueFactory<>("value"));
 		valueCol.setMinWidth(100);
 		valueCol.setEditable(false);
-		
+
 		TableColumn<Watchpoint, String> historyCol = new TableColumn<>();// dummy column for history button
 		historyCol.setCellValueFactory(new PropertyValueFactory<>(""));
 		historyCol.setCellFactory(new Callback<TableColumn<Watchpoint, String>, TableCell<Watchpoint, String>>() {
@@ -69,6 +69,7 @@ public class WatchpointAreaController {
 			public TableCell<Watchpoint, String> call(TableColumn<Watchpoint, String> param) {
 				TableCell<Watchpoint, String> cell = new TableCell<>() {
 					Button button = new Button("History");
+
 					@Override
 					public void updateItem(String item, boolean empty) {
 						button.setTooltip(new Tooltip("add watchpoints BEFORE debugging to enable history"));
@@ -99,14 +100,17 @@ public class WatchpointAreaController {
 		addName.setMaxWidth(nameCol.getPrefWidth());
 		Button addButton = new Button("Add");
 		addButton.setOnAction(e -> {
-			Watchpoint wp = new Watchpoint(addName.getText());
-			watchpoints.add(wp);
-			addName.clear();
-			wp.eval();
+			String name = addName.getText();
+			if (!name.isEmpty()) {// can't add empty named watchpoint
+				Watchpoint wp = new Watchpoint(addName.getText());
+				watchpoints.add(wp);
+				addName.clear();
+				wp.eval();
+			}
 		});
 		HBox hbox = new HBox(3.0, tableLabel, addName, addButton);
 		hbox.setAlignment(Pos.CENTER_LEFT);
-		
+
 //		tableLabel.setFont(new Font("Arial", 12));
 //		vbox.setPadding(new Insets(10, 0, 0, 10));
 		vbox.getChildren().addAll(hbox, table);
@@ -115,10 +119,8 @@ public class WatchpointAreaController {
 	public void evalAll() {
 		watchpoints.forEach(wp -> wp.eval());
 	}
-	
+
 	private void handleHistory(Watchpoint wp) {
-		Label historyTableLabel = new Label("History [" + wp.getName() + "]");
-		
 		TableColumn<HistoryRecord, String> nameCol = new TableColumn<>("Name");
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("nameProperty"));
 		nameCol.setSortable(false);
@@ -137,25 +139,32 @@ public class WatchpointAreaController {
 		TableColumn<HistoryRecord, String> valueNewCol = new TableColumn<>("Value(New)");
 		valueNewCol.setCellValueFactory(new PropertyValueFactory<>("valueNewProperty"));
 		valueNewCol.setSortable(false);
-		
+
 		TableView<HistoryRecord> historyTable = new TableView<>();
 		historyTable.setItems(wp.getHistory());
 		historyTable.getColumns().addAll(nameCol, locationCol, threadCol, readWriteCol, valueOldCol, valueNewCol);
 		historyTable.setMinSize(300, 300);
-		
+
 		VBox historyVbox = new VBox(5.0);
 		historyVbox.setPadding(new Insets(5, 0, 0, 5));
-		historyVbox.getChildren().addAll(historyTableLabel, historyTable);
+		historyVbox.getChildren().addAll(historyTable);
 		historyTable.prefHeightProperty().bind(historyVbox.heightProperty());
-		
+
 		Scene scene = new Scene(historyVbox);
 		Stage stage = new Stage();
+		stage.setTitle("History [" + wp.getName() + "]");
 		stage.setScene(scene);
 		stage.show();
 	}
 
 	public ObservableList<Watchpoint> getWatchpoints() {
 		return watchpoints;
+	}
+
+	public void clearHistory() {
+		watchpoints.forEach(wp -> {
+			wp.getHistory().clear();
+		});
 	}
 
 }

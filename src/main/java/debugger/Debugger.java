@@ -199,30 +199,16 @@ public class Debugger implements Runnable {
 					vmExit = true;
 				} else if (event instanceof BreakpointEvent) {
 					ThreadReference thread = ((BreakpointEvent) event).thread();
-					new Thread(() -> {
-						Lock lock = eventHandlerThreads.get(thread);
-						try {
-							lock.lock();// after this threadRef's handled the last event
-							if (debugMode) {
-								breakpointEventHandler(event);
-							} else {
-								eventSet.resume();
-							}
-						} finally {
-							lock.unlock();
-						}
-					}).start();
+					toSuspendedStatus(thread);
+					if (debugMode) {
+						breakpointEventHandler(event);
+					} else {
+						eventSet.resume();
+					}
 				} else if (event instanceof StepEvent) {
 					ThreadReference thread = ((StepEvent) event).thread();
-					new Thread(() -> {
-						Lock lock = eventHandlerThreads.get(thread);
-						try {
-							lock.lock();// after this threadRef's handled the last event
-							stepEventHandler(event);
-						} finally {
-							lock.unlock();
-						}
-					}).start();
+					toSuspendedStatus(thread);
+					stepEventHandler(event);
 				} else {
 					execute(event, debugMode);
 
@@ -269,11 +255,13 @@ public class Debugger implements Runnable {
 				System.out.println("--------\nClassPrepareEvent\nclassName: " + className
 						+ "\nmethods: " + classRefType.methods());
 
-				// request breakpoints
-				addSetLineBreakpointsToDebugger(classRefType, className);
+				if (debugMode) {
+					// request breakpoints
+					addSetLineBreakpointsToDebugger(classRefType, className);
 
-				// request watchpoints
-				requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
+					// request watchpoints
+					requestWatchpoints(classRefType);// add watchpoints before launching debugger to enable R/W history.
+				}
 			}
 			eventSet.resume();
 		} else if (event instanceof ClassUnloadEvent) {
@@ -295,27 +283,48 @@ public class Debugger implements Runnable {
 			long bci = location.codeIndex();
 			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, false, v, null, line, bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
-			int index = watchpoints.indexOf(new Watchpoint(f.name()));
-			Watchpoint wp = watchpoints.get(index);
-			wp.addHistoryRecord(record);
+			for (Watchpoint wp : watchpoints) {
+				if (wp.strip2fieldName().equals(f.name())) {
+					if ((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name()))
+							||
+							wp.stripOffFieldName().isEmpty()) {
+						if (wp.getField() == null) {
+							wp.setField(f);
+						}
+						wp.addHistoryRecord(record);
+						// break;// in case multiple WP of the same name exist
+					}
+				}
+			}
 			eventSet.resume();
 		} else if (event instanceof ModificationWatchpointEvent) {
 			ModificationWatchpointEvent modificationWatchpointEvent = (ModificationWatchpointEvent) event;
 			ThreadReference thread = modificationWatchpointEvent.thread();
-			Field f = modificationWatchpointEvent.field();
+			Field f = modificationWatchpointEvent.field();// f.declaringType() not necessarily location.declaringType()
 			Value currV = modificationWatchpointEvent.valueCurrent();
 			Value vToBe = modificationWatchpointEvent.valueToBe();
 			Location location = modificationWatchpointEvent.location();
-			ReferenceType refType = location.declaringType();
+			ReferenceType locationRefType = location.declaringType();// write happen in refType class
 			Method method = location.method();
 			int line = location.lineNumber();
 			long bci = location.codeIndex();
-			HistoryRecord record = new HistoryRecord(refType.name(), method.name(), thread, true, currV, vToBe, line,
-					bci);
+			HistoryRecord record = new HistoryRecord(locationRefType.name(), method.name(), thread, true, currV, vToBe,
+					line, bci);
 			ObservableList<Watchpoint> watchpoints = GUI.getWatchpointAreaController().getWatchpoints();
-			int index = watchpoints.indexOf(new Watchpoint(f.name()));
-			Watchpoint wp = watchpoints.get(index);
-			wp.addHistoryRecord(record);
+			for (Watchpoint wp : watchpoints) {
+				if (wp.strip2fieldName().equals(f.name())) {
+					if ((!wp.stripOffFieldName().isEmpty() && wp.stripOffFieldName().equals(f.declaringType().name()))
+							||
+							wp.stripOffFieldName().isEmpty()) {
+						if (wp.getField() == null) {
+							wp.setField(f);
+						}
+						wp.addHistoryRecord(record);
+						wp.setValue(vToBe.toString());
+						// break;//// in case multiple WP of the same name exist
+					}
+				}
+			}
 			eventSet.resume();
 		} else {
 			eventSet.resume();
@@ -375,8 +384,10 @@ public class Debugger implements Runnable {
 
 		requestWatchpoints(classRefType);// request watchpoints
 		Platform.runLater(() -> {
+			GUI.getThreadAreaController().setSelectedThread(thread);
 			GUI.getCodeAreaController().setCurrLine(lineNumber);// for line indicator
-			GUI.getThreadAreaController().setThreadGraphic(thread, true);
+//			GUI.getThreadAreaController().setThreadGraphic(thread, true);
+			GUI.getThreadAreaController().updateThreadsGraphic();
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);// refresh stackFrames
 			GUI.getWatchpointAreaController().evalAll();// refresh watchpoint
 			GUI.getLocalVarAreaController().refresh();// refresh localVar
@@ -393,7 +404,14 @@ public class Debugger implements Runnable {
 				if ((!withoutFieldName.equals("") && refType.name().endsWith(withoutFieldName))
 						|| withoutFieldName.equals("")) {
 					Field field = refType.fieldByName(fieldName);
-					if (field != null) {
+					// don't add a second WP of the same field
+					boolean[] existed = { false };
+					eventRequestManager.accessWatchpointRequests().forEach(accessWpReq -> {
+						if (accessWpReq.field().equals(field)) {
+							existed[0] = true;
+						}
+					});
+					if (field != null && !existed[0]) {
 						AccessWatchpointRequest accessRequest;
 						if (vm.canWatchFieldAccess()) {
 							accessRequest = eventRequestManager.createAccessWatchpointRequest(field);
@@ -556,10 +574,6 @@ public class Debugger implements Runnable {
 		return classes;
 	}
 
-	public ThreadReference getMainThread() {
-		return mainThread;
-	}
-
 	public Map<ThreadReference, Event> getCurrentEvent() {
 		return currentEvent;
 	}
@@ -621,6 +635,13 @@ public class Debugger implements Runnable {
 	public void terminate() {
 		vmExit = true;
 		vm.resume();
+	}
+
+	// return true for newly added, false for already in suspended list
+	private void toSuspendedStatus(ThreadReference thread) {
+		Platform.runLater(() -> {
+			GUI.getThreadAreaController().setThreadGraphic(thread, true);
+		});
 	}
 
 	@Override

@@ -18,39 +18,24 @@ import java.util.function.IntFunction;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
-import org.reactfx.EventStream;
-import org.reactfx.EventStreams;
-import org.reactfx.value.Val;
 
-import debugger.Debugger;
 import debugger.GUI;
 import debugger.dataType.LineBreakpoint;
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -58,13 +43,11 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
 import javafx.stage.FileChooser;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class CodeAreaController {
@@ -101,8 +84,8 @@ public class CodeAreaController {
 	class LineIndicatorFactory implements IntFunction<Node> {// TODO
 		@Override
 		public Node apply(int lineNumber) {
-			Polygon triangle = new Polygon(0.0, 0.0, 10.0, 5.0, 0.0, 10.0);
-			triangle.setFill(Color.GREEN);
+			Polygon triangle = new Polygon(0.0, 2.0, 5.0, 2.0, 5.0, 5.0, 10.0, 0.0, 5.0, -5.0, 5.0, -2.0, 0.0, -2.0);
+			triangle.setFill(Color.BLUE);
 			triangle.setVisible(false);
 
 //			ThreadAreaController threadAreaController = GUI.getThreadAreaController();
@@ -255,7 +238,7 @@ public class CodeAreaController {
 			lineNum.setCursor(Cursor.HAND);
 			lineNum.setOnMouseClicked(click -> {
 				selectedCodeArea.deselect();
-					toggleLineBreakpoint(click, line, (Circle) ((Label) bp).getGraphic());
+				toggleLineBreakpoint(click, line, (Circle) ((Label) bp).getGraphic());
 			});
 			HBox hBox = new HBox(bp, lineNum, indicator);
 			hBox.setAlignment(Pos.CENTER_LEFT);

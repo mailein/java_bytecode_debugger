@@ -130,18 +130,16 @@ public class ThreadAreaController {
 		terminated = true;// can not remove this debugger yet
 
 		// remove all treeItems under this debugger other than debuggerTreeItem
-		removeDebuggerChildrenFromTree(debugger);
+		debuggerTreeItem.getChildren().clear();
 	}
 
+	// at the start of next debug session
 	public void removeTerminatedDebugger() {
-		if (terminated)
-			removeDebugger(debugger);
-	}
-
-	public void removeDebugger(Debugger debugger) {
-		removeDebuggerFromTree(debugger);
-		this.debugger = null;
-		this.terminated = false;
+		if (terminated) {
+			tree.getRoot().getChildren().remove(debuggerTreeItem);
+			this.debugger = null;
+			this.terminated = false;
+		}
 	}
 
 	// only added Debugger and its threadReferences to root, stackFrame is not added
@@ -187,14 +185,6 @@ public class ThreadAreaController {
 				}
 			}
 		});
-	}
-
-	private void removeDebuggerFromTree(Debugger debugger) {
-		tree.getRoot().getChildren().remove(debuggerTreeItem);
-	}
-
-	private void removeDebuggerChildrenFromTree(Debugger debugger) {
-		debuggerTreeItem.getChildren().clear();
 	}
 
 	// add threads to Debugger; add stackFrames to thread
@@ -357,6 +347,19 @@ public class ThreadAreaController {
 			threadTreeItem.setGraphic(getSuspendedIcon());
 		} else {
 			threadTreeItem.setGraphic(getRunningIcon());
+		}
+	}
+
+	public void updateThreadsGraphic() {
+		ObservableList<ThreadReference> threads = debugger.getThreads();
+		threads.forEach(thread -> setThreadGraphic(thread, thread.isSuspended()));
+	}
+
+	public void setSelectedThread(ThreadReference thread) {
+		if (!terminated) {
+			String name = generateThreadName(thread);
+			TreeItem<String> threadTreeItem = getTreeItem(name, debuggerTreeItem);
+			tree.getSelectionModel().select(threadTreeItem);
 		}
 	}
 //
