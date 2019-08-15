@@ -28,6 +28,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 
 public class ThreadAreaController {
 	// tree > root > debugger > threadReferences > stackFrames per threadReference
@@ -93,6 +95,16 @@ public class ThreadAreaController {
 //						System.out.println("prev frame is" + prevFrame.getValue());
 //					}
 				}
+				// update line indicator
+				if (selectedThread.isSuspended()) {
+					try {
+						StackFrame stackFrame = selectedThread.frame(0);
+						int lineNumber = stackFrame.location().lineNumber();
+						GUI.getCodeAreaController().setCurrLine(lineNumber);
+					} catch (IncompatibleThreadStateException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		});
 		tree.setShowRoot(false);
@@ -139,10 +151,10 @@ public class ThreadAreaController {
 						if (!terminated) {
 							String name = generateThreadName(thread);
 							TreeItem<String> threadTreeItem = addBranch(name, debuggerTreeItem);
-							threadTreeItem.setGraphic(getPauseIcon());
+							threadTreeItem.setGraphic(getRunningIcon());
 							tree.getSelectionModel().select(threadTreeItem);
+							threadsTreeItemsLock.lock();// on GUI thread now
 							try {
-								threadsTreeItemsLock.lock();// on GUI thread now
 								threadsTreeItems.put(thread, threadTreeItem);
 								addedThread.signal();
 							} finally {
@@ -158,8 +170,8 @@ public class ThreadAreaController {
 						if (this.selectedThread.equals(thread)) {
 							tree.getSelectionModel().selectPrevious();
 						}
+						threadsTreeItemsLock.lock();// on GUI thread now
 						try {
-							threadsTreeItemsLock.lock();// on GUI thread now
 							threadsTreeItems.remove(thread);
 						} finally {
 							threadsTreeItemsLock.unlock();
@@ -199,8 +211,8 @@ public class ThreadAreaController {
 	public void updateStackFrameBranches(ThreadReference thread) {
 		// remove all old stackFrames for this thread
 		TreeItem<String> threadTreeItem = null;
+		threadsTreeItemsLock.lock();// on Debugger thread now
 		try {
-			threadsTreeItemsLock.lock();// on Debugger thread now
 			while (!threadsTreeItems.containsKey(thread)) {
 				addedThread.await();
 			}
@@ -306,22 +318,20 @@ public class ThreadAreaController {
 
 	// https://www.iconfinder.com/icons/3855622/pause_play_icon
 	// https://www.iconfinder.com/icons/3855607/parallel_pause_icon
-	private ImageView getPauseIcon() {
-		try {
-			return new ImageView(
-					new Image(new FileInputStream(new File("src/main/resources/debugger/view/pause.png"))));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
+	private Circle getSuspendedIcon() {
+		return new Circle(5.0, Color.YELLOW);
 	}
 
-	private ImageView getPlayIcon() {
-		try {
-			return new ImageView(new Image(new FileInputStream(new File("src/main/resources/debugger/view/play.png"))));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
+	private Circle getRunningIcon() {
+		return new Circle(5.0, Color.GREEN);
+	}
+
+	public void setThreadGraphic(ThreadReference thread, boolean isSuspended) {
+		TreeItem<String> threadTreeItem = getTreeItem(generateThreadName(thread), debuggerTreeItem);
+		if (isSuspended) {
+			threadTreeItem.setGraphic(getSuspendedIcon());
+		} else {
+			threadTreeItem.setGraphic(getRunningIcon());
 		}
 	}
 //
