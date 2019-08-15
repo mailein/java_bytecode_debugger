@@ -396,6 +396,10 @@ public class Debugger implements Runnable {
 			});
 		}
 
+		// request watchpoints
+		requestWatchpoints(classRefType);
+		// watchpoint eval need loc info from event
+		this.currentEvent.put(thread, event); // update thread's event, TODO see wp.eval()
 		// TODO sometimes no indicator
 		Platform.runLater(() -> {
 			// for line indicator
@@ -404,12 +408,6 @@ public class Debugger implements Runnable {
 			GUI.getThreadAreaController().updateThreadsGraphic();
 			// refresh stackFrames
 			GUI.getThreadAreaController().updateStackFrameBranches(thread);
-		});
-		// request watchpoints
-		requestWatchpoints(classRefType);
-		// watchpoint eval need loc info from event
-		this.currentEvent.put(thread, event); // update thread's event, TODO see wp.eval()
-		Platform.runLater(() -> {
 			// set selectedThread before updating watchpoints and localVar
 			GUI.getThreadAreaController().setSelectedThread(thread);
 			// refresh watchpoints, localVar
