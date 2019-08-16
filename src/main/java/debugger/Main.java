@@ -21,6 +21,7 @@ public class Main {
 		newDebugger.addListener((obs, ov, nv) -> {
 			if (nv) {
 				GUI.getOutputAreaController().clear();
+				GUI.getWatchpointAreaController().clearHistory();
 				newDebug();
 				newDebugger.set(false);
 			}
@@ -48,7 +49,6 @@ public class Main {
 					rootController.enableRunOrDebug();
 					rootController.enableOrDisableButtons(true);
 					// clear view after each termination
-					GUI.getWatchpointAreaController().clearHistory();
 					GUI.getLocalVarAreaController().clear();
 					// TODO clear line indicator in CodeArea and BytecodeArea
 				} catch (InterruptedException e) {
