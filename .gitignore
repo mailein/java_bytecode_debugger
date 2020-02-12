@@ -1,2 +1,9 @@
 /.gradle/
 /build/
+/.idea/
+/bin/
+src/main/java/DesktopController.java
+src/main/java/LineNumAndBreakpointFactory.java
+src/main/java/debugger/dataType/ObservableThreadReference.java
+src/main/java/debugger/misc/Tree.java
+log
