@@ -5,10 +5,28 @@ Motivation:
     JDB (the java debugger) has stepi to step one instruction, but no GUI
     This little project combines the two.
 
-to run:
-    java -jar build/libs/debuggerGradle.jar
-
 current java version:
     13.0.2
     you can change it in build.gradle
 
+to run:
+    java -jar build/libs/debuggerGradle.jar
+    you should have a java source file to be debugged, but you don't need to compile it, javac and javap are integrated in the project, you just need to click compile after you open the source file
+    The integrated javac outputs a class file, the integrated javap outputs a bytecode file, which is a made-up file type and essentially the content of javap's output in the console. Both output will be in the same folder as source code file.
+        javac -g Main.java				//-g							   Generate all debugging info
+        javap -c -l -p Main.class		//-p  -private                     Show all classes and members
+        								//-c                               Disassemble the code
+        								//-l                               Print line number and local variable tables
+
+to debug:
+    method 1:
+    step 1: bash input:
+    java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,address="8000" -jar build/libs/debuggerGradle.jar
+    step 2: in eclipse > debug configurations, choose:
+    remote, socket attach
+
+    method 2:
+    step 1: in eclipse > debug configurations choose:
+    remote, socket listen
+    step 2: bash input:
+    java -Xdebug -Xrunjdwp:transport=dt_socket,address=127.0.0.1:8000,suspend=y -jar build/libs/debuggerGradle.jar
