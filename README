@@ -1,0 +1,14 @@
+It's a bachelor thesis project to supplement the course Nebenläufige Programmierung in UdS.
+
+Motivation:
+    debuggers in IDE (eg. intellij IDEA or eclipse) have step into/over/return
+    JDB (the java debugger) has stepi to step one instruction, but no GUI
+    This little project combines the two.
+
+to run:
+    java -jar build/libs/debuggerGradle.jar
+
+current java version:
+    13.0.2
+    you can change it in build.gradle
+
