@@ -1,5 +1,7 @@
 It's a bachelor thesis project to supplement the course Nebenläufige Programmierung in UdS.
 
+Watch the introduction video: https://www.youtube.com/watch?v=q7Q7_ex2KuE
+
 Motivation:
     debuggers in IDE (eg. intellij IDEA or eclipse) have step into/over/return
     JDB (the java debugger) has stepi to step one instruction, but no GUI
