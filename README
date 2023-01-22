@@ -15,10 +15,10 @@ to run:
     java -jar build/libs/debuggerGradle.jar
     you should have a java source file to be debugged, but you don't need to compile it, javac and javap are integrated in the project, you just need to click compile after you open the source file
     The integrated javac outputs a class file, the integrated javap outputs a bytecode file, which is a made-up file type and essentially the content of javap's output in the console. Both output will be in the same folder as source code file.
-        javac -g Main.java				//-g Generate all debugging info
-        javap -c -l -p Main.class		//-p -private Show all classes and members
-        								//-c Disassemble the code
-        								//-l Print line number and local variable tables
+        javac -g Main.java              //-g Generate all debugging info
+        javap -c -l -p Main.class       //-p -private Show all classes and members
+                                        //-c Disassemble the code
+                                        //-l Print line number and local variable tables
 
 to debug:
     method 1:
