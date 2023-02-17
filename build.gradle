@@ -28,6 +28,9 @@ dependencies {
     //compile files('libs/pseuco-ide-4677.jar')
     //jdk.jdi 
     //compile files('libs/tools.jar')
+    dependencies {
+        compile files("${System.getProperty('java.home')}/../lib/tools.jar")
+    }
     //javaFX11
     implementation 'org.openjfx:javafx-base:13.0.2:win'
     implementation 'org.openjfx:javafx-controls:13.0.2:win'
