@@ -8,8 +8,7 @@ Motivation:
     This little project combines the two.
 
 current java version:
-    13.0.2
-    you can change it in build.gradle
+    liberica 11, which contains JDI and JavaFX
 
 to run:
     java -jar build/libs/debuggerGradle.jar
